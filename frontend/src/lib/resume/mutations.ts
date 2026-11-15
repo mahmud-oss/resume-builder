@@ -204,11 +204,14 @@ export const moveSection =
     });
   };
 
+/** Adds an empty entry at the end of a section. Pass an id when the caller needs to find it afterwards. */
 export const addItem =
-  (sectionId: string): Mutation =>
+  (sectionId: string, id?: string): Mutation =>
   (doc) =>
     produce(doc, (d) => {
-      findSection(d, sectionId)?.items.push(newItem());
+      const item = newItem();
+      if (id) item.id = id;
+      findSection(d, sectionId)?.items.push(item);
     });
 
 export const removeItem =
@@ -219,17 +222,6 @@ export const removeItem =
       if (!s) return;
       s.items = s.items.filter((i) => i.id !== itemId);
       if (s.items.length === 0) s.items.push(newItem());
-    });
-
-/** Adds an empty entry directly below another one. */
-export const addItemAfter =
-  (sectionId: string, afterItemId: string): Mutation =>
-  (doc) =>
-    produce(doc, (d) => {
-      const s = findSection(d, sectionId);
-      if (!s) return;
-      const at = s.items.findIndex((i) => i.id === afterItemId);
-      s.items.splice(at < 0 ? s.items.length : at + 1, 0, newItem());
     });
 
 /** Chooses the icon for a standard contact field; null goes back to its default. */

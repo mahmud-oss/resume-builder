@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { newDoc } from "./doc";
 import { mergeLineUp, splitLineAt } from "./lines";
-import { addItemAfter, addSection } from "./mutations";
+import { addItem, addSection } from "./mutations";
 
 describe("bullet lines on the page", () => {
   it("Enter in the middle splits the line", () => {
@@ -32,14 +32,13 @@ describe("bullet lines on the page", () => {
 });
 
 describe("adding on the page", () => {
-  it("adds an entry directly below the chosen one", () => {
+  it("adds an entry at the end of its section", () => {
     let doc = newDoc();
     const exp = doc.data.sections.find((s) => s.type === "experience")!;
-    doc = addItemAfter(exp.id, exp.items[0].id)(doc);
-    doc = addItemAfter(exp.id, exp.items[0].id)(doc);
+    doc = addItem(exp.id, "second")(doc);
+    doc = addItem(exp.id, "third")(doc);
     const items = doc.data.sections.find((s) => s.id === exp.id)!.items;
-    expect(items).toHaveLength(3);
-    expect(items[0].id).toBe(exp.items[0].id);
+    expect(items.map((i) => i.id)).toEqual([exp.items[0].id, "second", "third"]);
   });
 
   it("adds a section at the end of the CV", () => {

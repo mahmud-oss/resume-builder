@@ -17,7 +17,7 @@ import { newId } from "@/lib/resume/defaults";
 import {
   addCustomField,
   addSection,
-  addItemAfter,
+  addItem,
   moveItem,
   moveSection,
   removeCustomField,
@@ -32,7 +32,11 @@ import {
   type FieldTarget,
   type Mutation,
 } from "@/lib/resume/mutations";
-import { ADDABLE_SECTIONS, SECTION_SCHEMAS, type FieldDef } from "@/lib/resume/schemas";
+import {
+  ADDABLE_SECTIONS,
+  SECTION_SCHEMAS,
+  type FieldDef,
+} from "@/lib/resume/schemas";
 import type { FieldSet, Item, Section, SectionType } from "@/lib/resume/types";
 
 import type { Edit } from "@/components/editor/FieldEditors";
@@ -47,7 +51,19 @@ export function useVisual() {
 const btn =
   "inline-flex h-6 w-6 items-center justify-center rounded text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent";
 
-function Act({ label, onClick, disabled, children, active }: { label: string; onClick: () => void; disabled?: boolean; children: ReactNode; active?: boolean }) {
+function Act({
+  label,
+  onClick,
+  disabled,
+  children,
+  active,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+  active?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -64,7 +80,13 @@ function Act({ label, onClick, disabled, children, active }: { label: string; on
 }
 
 /** The little bar that appears when hovering a block. */
-function Bar({ children, style }: { children: ReactNode; style: React.CSSProperties }) {
+function Bar({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style: React.CSSProperties;
+}) {
   return (
     <div className="rb-act" style={style}>
       {children}
@@ -114,10 +136,17 @@ export function AddSectionMenu({
   triggerClassName?: string;
 }) {
   return (
-    <PortalMenu label={title} trigger={trigger} triggerClassName={triggerClassName} width={220}>
+    <PortalMenu
+      label={title}
+      trigger={trigger}
+      triggerClassName={triggerClassName}
+      width={220}
+    >
       {(close) => (
         <ul>
-          <li className="px-2 pb-1 text-xs font-medium text-slate-500">{title}</li>
+          <li className="px-2 pb-1 text-xs font-medium text-slate-500">
+            {title}
+          </li>
           {types.map((type) => (
             <li key={type}>
               <button
@@ -189,6 +218,9 @@ export function AddSectionPlaceholder({
   );
 }
 
+/** Height of the tools row above each section heading. */
+const SECTION_ROW_HEIGHT = 30;
+
 export function SectionActions({
   section,
   prevId,
@@ -202,67 +234,135 @@ export function SectionActions({
   canBreak?: boolean;
 }) {
   const v = useVisual();
-  if (!v) return null;
+  // A row of its own above the heading, always visible. It takes the same height whether or not the
+  // tools are drawn (the measuring copy has none), and the heading below keeps the full width, so a
+  // long section name wraps normally and can never run under the buttons.
+  const row: React.CSSProperties = {
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    height: SECTION_ROW_HEIGHT,
+  };
+  if (!v) return <div style={row} />;
   const { edit } = v;
   return (
-    <Bar style={{ top: -16, right: 0 }}>
-      <Act label="Move section up" disabled={!prevId} onClick={() => edit(moveSection(section.id, prevId!))}>
-        <ArrowUpIcon />
-      </Act>
-      <Act label="Move section down" disabled={!nextId} onClick={() => edit(moveSection(section.id, nextId!))}>
-        <ArrowDownIcon />
-      </Act>
-      {canBreak && (
+    <div style={row}>
+      <div
+        className="rb-bar"
+        role="toolbar"
+        aria-label={`Tools for ${section.title || "this section"}`}
+      >
         <Act
-          label={section.pageBreakBefore ? "Remove page break before this section" : "Start this section on a new page"}
-          active={!!section.pageBreakBefore}
-          onClick={() => edit(toggleSectionPageBreak(section.id))}
+          label="Move section up"
+          disabled={!prevId}
+          onClick={() => edit(moveSection(section.id, prevId!))}
         >
-          <PageBreakIcon />
+          <ArrowUpIcon />
         </Act>
-      )}
-      <Act label="Hide section" onClick={() => edit(toggleSectionHidden(section.id))}>
-        <EyeIcon />
-      </Act>
-      <Act label="Delete section" onClick={() => edit(removeSection(section.id))}>
-        <TrashIcon />
-      </Act>
-    </Bar>
+        <Act
+          label="Move section down"
+          disabled={!nextId}
+          onClick={() => edit(moveSection(section.id, nextId!))}
+        >
+          <ArrowDownIcon />
+        </Act>
+        {canBreak && (
+          <Act
+            label={
+              section.pageBreakBefore
+                ? "Remove page break before this section"
+                : "Start this section on a new page"
+            }
+            active={!!section.pageBreakBefore}
+            onClick={() => edit(toggleSectionPageBreak(section.id))}
+          >
+            <PageBreakIcon />
+          </Act>
+        )}
+        <Act
+          label="Hide section"
+          onClick={() => edit(toggleSectionHidden(section.id))}
+        >
+          <EyeIcon />
+        </Act>
+        <Act
+          label="Delete section"
+          onClick={() => edit(removeSection(section.id))}
+        >
+          <TrashIcon />
+        </Act>
+      </div>
+    </div>
   );
 }
 
 /** Show or hide each field of an entry (or of the header), and add your own. */
-export function FieldsMenu({ target, fs, fields }: { target: FieldTarget; fs: FieldSet; fields: FieldDef[] }) {
+export function FieldsMenu({
+  target,
+  fs,
+  fields,
+}: {
+  target: FieldTarget;
+  fs: FieldSet;
+  fields: FieldDef[];
+}) {
   const v = useVisual();
   if (!v) return null;
   const { edit } = v;
   return (
-    <PortalMenu label="Fields" trigger={<MoreIcon />} triggerClassName={btn} width={250}>
+    <PortalMenu
+      label="Fields"
+      trigger={<MoreIcon />}
+      triggerClassName={btn}
+      width={250}
+    >
       {() => (
         <div>
-          <p className="px-1 pb-1 text-xs font-medium text-slate-500">Show on CV</p>
+          <p className="px-1 pb-1 text-xs font-medium text-slate-500">
+            Show on CV
+          </p>
           <ul>
             {fields.map((f) => (
               <li key={f.key}>
                 <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-slate-50">
-                  <input type="checkbox" checked={!fs.hiddenFields[f.key]} onChange={() => edit(toggleFieldHidden(target, f.key))} />
+                  <input
+                    type="checkbox"
+                    checked={!fs.hiddenFields[f.key]}
+                    onChange={() => edit(toggleFieldHidden(target, f.key))}
+                  />
                   {f.label}
                 </label>
               </li>
             ))}
             {fs.custom.map((c) => (
-              <li key={c.id} className="flex items-center gap-1 rounded px-1 py-1 hover:bg-slate-50">
+              <li
+                key={c.id}
+                className="flex items-center gap-1 rounded px-1 py-1 hover:bg-slate-50"
+              >
                 <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
-                  <input type="checkbox" checked={!c.hidden} onChange={() => edit(toggleCustomFieldHidden(target, c.id))} />
+                  <input
+                    type="checkbox"
+                    checked={!c.hidden}
+                    onChange={() => edit(toggleCustomFieldHidden(target, c.id))}
+                  />
                   <span className="truncate">{c.value || "Your detail"}</span>
                 </label>
-                <button type="button" aria-label="Remove field" className={btn} onClick={() => edit(removeCustomField(target, c.id))}>
+                <button
+                  type="button"
+                  aria-label="Remove field"
+                  className={btn}
+                  onClick={() => edit(removeCustomField(target, c.id))}
+                >
                   <TrashIcon />
                 </button>
               </li>
             ))}
           </ul>
-          <button type="button" onClick={() => edit(addCustomField(target))} className="mt-2 w-full rounded px-1 py-1.5 text-left text-brand hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={() => edit(addCustomField(target))}
+            className="mt-2 w-full rounded px-1 py-1.5 text-left text-brand hover:bg-slate-50"
+          >
             + Add your own detail
           </button>
         </div>
@@ -289,23 +389,42 @@ export function ItemActions({
   const { edit } = v;
   const schema = SECTION_SCHEMAS[section.type];
   if (schema.singleItem) return null;
-  const style = variant === "row" ? { top: "50%", right: 0, transform: "translateY(-50%)" } : { top: -16, right: 0 };
+  // Entry tools sit inside their own entry (never over the one above), so it is clear whose they are.
+  const style =
+    variant === "row"
+      ? { top: "50%", right: 0, transform: "translateY(-50%)" }
+      : { top: 2, right: 2 };
   return (
     <Bar style={style}>
-      <Act label="Move entry up" disabled={!prevId} onClick={() => edit(moveItem(section.id, item.id, prevId!))}>
+      <Act
+        label="Move entry up"
+        disabled={!prevId}
+        onClick={() => edit(moveItem(section.id, item.id, prevId!))}
+      >
         <ArrowUpIcon />
       </Act>
-      <Act label="Move entry down" disabled={!nextId} onClick={() => edit(moveItem(section.id, item.id, nextId!))}>
+      <Act
+        label="Move entry down"
+        disabled={!nextId}
+        onClick={() => edit(moveItem(section.id, item.id, nextId!))}
+      >
         <ArrowDownIcon />
       </Act>
-      <Act label="Add entry below" onClick={() => edit(addItemAfter(section.id, item.id))}>
-        <PlusIcon />
-      </Act>
-      <FieldsMenu target={{ kind: "item", sectionId: section.id, itemId: item.id }} fs={item} fields={schema.fields} />
-      <Act label="Hide entry" onClick={() => edit(toggleItemHidden(section.id, item.id))}>
+      <FieldsMenu
+        target={{ kind: "item", sectionId: section.id, itemId: item.id }}
+        fs={item}
+        fields={schema.fields}
+      />
+      <Act
+        label="Hide entry"
+        onClick={() => edit(toggleItemHidden(section.id, item.id))}
+      >
         <EyeIcon />
       </Act>
-      <Act label="Delete entry" onClick={() => edit(removeItem(section.id, item.id))}>
+      <Act
+        label="Delete entry"
+        onClick={() => edit(removeItem(section.id, item.id))}
+      >
         <TrashIcon />
       </Act>
     </Bar>
@@ -313,7 +432,15 @@ export function ItemActions({
 }
 
 /** Header (name and contact details) tools: choose which details show, and add your own. */
-export function HeaderActions({ fs, fields, inside }: { fs: FieldSet; fields: FieldDef[]; inside?: boolean }) {
+export function HeaderActions({
+  fs,
+  fields,
+  inside,
+}: {
+  fs: FieldSet;
+  fields: FieldDef[];
+  inside?: boolean;
+}) {
   const v = useVisual();
   if (!v) return null;
   return (
@@ -327,11 +454,24 @@ export function HeaderActions({ fs, fields, inside }: { fs: FieldSet; fields: Fi
 export function HiddenRow({ label, show }: { label: string; show: Mutation }) {
   const v = useVisual();
   return (
-    <div className="rb-ph" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85em", padding: "2px 0" }}>
+    <div
+      className="rb-ph"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        fontSize: "0.85em",
+        padding: "2px 0",
+      }}
+    >
       <EyeOffIcon />
       <span>{label} (hidden)</span>
       {v && (
-        <button type="button" onClick={() => v.edit(show)} className="font-medium text-brand underline">
+        <button
+          type="button"
+          onClick={() => v.edit(show)}
+          className="font-medium text-brand underline"
+        >
           Show
         </button>
       )}
@@ -340,13 +480,34 @@ export function HiddenRow({ label, show }: { label: string; show: Mutation }) {
 }
 
 /** The photo spot: a dashed placeholder to add one, or the photo with change and remove. */
-export function PhotoSlot({ photo, size, round }: { photo: string | null; size: number; round: boolean }) {
+export function PhotoSlot({
+  photo,
+  size,
+  round,
+}: {
+  photo: string | null;
+  size: number;
+  round: boolean;
+}) {
   const v = useVisual();
   const radius = round ? "50%" : 6;
   if (!photo) {
     const empty = (
       <div
-        style={{ width: size, height: size, borderRadius: radius, border: "2px dashed #9ca3af", color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", fontSize: "0.8em", gap: 2, background: "rgba(255,255,255,.6)" }}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radius,
+          border: "2px dashed #9ca3af",
+          color: "#6b7280",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          fontSize: "0.8em",
+          gap: 2,
+          background: "rgba(255,255,255,.6)",
+        }}
       >
         <PlusIcon />
         Photo
@@ -354,19 +515,44 @@ export function PhotoSlot({ photo, size, round }: { photo: string | null; size: 
     );
     if (!v) return empty;
     return (
-      <button type="button" aria-label="Add photo" onClick={v.pickPhoto} style={{ borderRadius: radius, display: "block" }}>
+      <button
+        type="button"
+        aria-label="Add photo"
+        onClick={v.pickPhoto}
+        style={{ borderRadius: radius, display: "block" }}
+      >
         {empty}
       </button>
     );
   }
   const img = (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={photo} alt="" width={size} height={size} style={{ width: size, height: size, objectFit: "cover", borderRadius: radius, display: "block" }} />
+    <img
+      src={photo}
+      alt=""
+      width={size}
+      height={size}
+      style={{
+        width: size,
+        height: size,
+        objectFit: "cover",
+        borderRadius: radius,
+        display: "block",
+      }}
+    />
   );
   if (!v) return img;
   return (
-    <div className="rb-hov" style={{ position: "relative", width: size, height: size }}>
-      <button type="button" aria-label="Change photo" onClick={v.pickPhoto} style={{ display: "block", borderRadius: radius }}>
+    <div
+      className="rb-hov"
+      style={{ position: "relative", width: size, height: size }}
+    >
+      <button
+        type="button"
+        aria-label="Change photo"
+        onClick={v.pickPhoto}
+        style={{ display: "block", borderRadius: radius }}
+      >
         {img}
       </button>
       <div className="rb-act" style={{ top: -8, right: -8 }}>
@@ -397,7 +583,11 @@ export function AddFieldPlaceholder({ align }: { align: "start" | "center" }) {
     background: "transparent",
     color: "inherit",
   };
-  const wrap: React.CSSProperties = { display: "flex", justifyContent: align === "center" ? "center" : "flex-start", marginTop: 6 };
+  const wrap: React.CSSProperties = {
+    display: "flex",
+    justifyContent: align === "center" ? "center" : "flex-start",
+    marginTop: 6,
+  };
   const visual = api?.visual;
   if (!api || !visual) {
     return (
@@ -416,11 +606,77 @@ export function AddFieldPlaceholder({ align }: { align: "start" | "center" }) {
         onClick={() => {
           const id = newId();
           visual.edit(addCustomField({ kind: "basics" }, id));
-          api.requestFocus({ key: editKey({ kind: "basicsCustom", id }), caret: "start" });
+          api.requestFocus({
+            key: editKey({ kind: "basicsCustom", id }),
+            caret: "start",
+          });
         }}
       >
         + Add field
       </button>
     </div>
+  );
+}
+
+const ADD_ENTRY_HEIGHT = 28;
+
+/**
+ * "+ Add experience" (and so on) closes each section that holds a list of entries: always visible while
+ * placeholders are on, always after the last entry. One click adds an entry and puts the cursor in its
+ * first field. A plain box of the same size in the measuring copy and previews.
+ */
+export function AddEntryPlaceholder({
+  section,
+  color,
+  gap,
+}: {
+  section: Section;
+  color: string;
+  gap: number;
+}) {
+  const api = useContext(EditContext);
+  const schema = SECTION_SCHEMAS[section.type];
+  const label = `+ Add ${schema.itemLabel}`;
+  const box: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: ADD_ENTRY_HEIGHT,
+    marginTop: gap,
+    border: `1.5px dashed ${color}`,
+    borderRadius: 6,
+    color,
+    fontSize: "0.9em",
+    fontWeight: 600,
+    fontFamily: "inherit",
+    background: "transparent",
+    opacity: 0.85,
+  };
+  const visual = api?.visual;
+  if (!api || !visual) return <div style={box}>{label}</div>;
+  return (
+    <button
+      type="button"
+      aria-label={`Add ${schema.itemLabel}`}
+      style={{ ...box, cursor: "pointer" }}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => {
+        const id = newId();
+        visual.edit(addItem(section.id, id));
+        const field = schema.title ?? schema.rowLabel ?? schema.fields[0].key;
+        api.requestFocus({
+          key: editKey({
+            kind: "item",
+            sectionId: section.id,
+            itemId: id,
+            field,
+          }),
+          caret: "start",
+        });
+      }}
+    >
+      {label}
+    </button>
   );
 }

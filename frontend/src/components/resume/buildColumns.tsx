@@ -9,7 +9,7 @@ import { Lines, Txt, editKey } from "./Editable";
 import { DEFAULT_CONTACT_ICON } from "@/lib/resume/icons";
 import { setCustomIcon, setFieldIcon, toggleItemHidden, toggleSectionHidden } from "@/lib/resume/mutations";
 import { ContactIcon } from "./ContactIcon";
-import { AddFieldPlaceholder, AddSectionPlaceholder, HeaderActions, HiddenRow, ItemActions, PhotoSlot, SectionActions } from "./visual/Actions";
+import { AddEntryPlaceholder, AddFieldPlaceholder, AddSectionPlaceholder, HeaderActions, HiddenRow, ItemActions, PhotoSlot, SectionActions } from "./visual/Actions";
 
 /**
  * Turns a resume plus a template into blocks that can be measured and placed on pages.
@@ -516,8 +516,8 @@ function sectionBlocks(c: Ctx, section: Section, nav: Neighbours): Block[] {
 
   const heading = (
     <div className="rb-hov" data-section-id={section.id}>
+      {c.ghost && <SectionActions section={section} prevId={nav.prevId} nextId={nav.nextId} canBreak={c.variant === "main"} />}
       <SectionHeading c={c} section={section} />
-      <SectionActions section={section} prevId={nav.prevId} nextId={nav.nextId} canBreak={c.variant === "main"} />
     </div>
   );
   const gap = c.u * 1.1;
@@ -539,6 +539,9 @@ function sectionBlocks(c: Ctx, section: Section, nav: Neighbours): Block[] {
               <EntryItem c={c} section={section} schema={schema} item={item} />
               <ItemActions section={section} item={item} variant="entry" {...around(index)} />
             </div>
+          )}
+          {index === items.length - 1 && c.ghost && !schema.singleItem && (
+            <AddEntryPlaceholder section={section} color={c.variant === "side" ? c.fg : c.accent} gap={c.u * 0.8} />
           )}
         </div>
       ),
@@ -576,6 +579,9 @@ function sectionBlocks(c: Ctx, section: Section, nav: Neighbours): Block[] {
         <div style={{ paddingBottom: sectionEnd }}>
           {heading}
           {body}
+          {c.ghost && schema.layout === "rows" && (
+            <AddEntryPlaceholder section={section} color={c.variant === "side" ? c.fg : c.accent} gap={c.u * 0.5} />
+          )}
         </div>
       ),
     },
