@@ -2,6 +2,7 @@ import { produce } from "immer";
 import { arrayMove } from "@dnd-kit/sortable";
 
 import { newId, newItem, newSection } from "./defaults";
+import type { IconChoice, IconRef } from "./icons";
 import { getTemplate } from "./templates";
 import type { Design, EditRef, FieldSet, ResumeDoc, Section, SectionType, StyleTarget, TextStyle } from "./types";
 
@@ -78,7 +79,7 @@ export const applyEdit =
           break;
         case "basicsCustom": {
           const c = d.data.basics.custom.find((x) => x.id === ref.id);
-          if (c) c[ref.part] = text;
+          if (c) c.value = text;
           break;
         }
         case "item": {
@@ -89,7 +90,7 @@ export const applyEdit =
         case "itemCustom": {
           const item = d.data.sections.find((s) => s.id === ref.sectionId)?.items.find((i) => i.id === ref.itemId);
           const c = item?.custom.find((x) => x.id === ref.id);
-          if (c) c[ref.part] = text;
+          if (c) c.value = text;
           break;
         }
         case "sectionTitle": {
@@ -153,11 +154,12 @@ export const toggleSectionPageBreak =
 
 // --- custom fields -----------------------------------------------------------------------
 
+/** Adds an empty field of the user's own. Pass an id when the caller needs to find it afterwards. */
 export const addCustomField =
-  (target: FieldTarget): Mutation =>
+  (target: FieldTarget, id: string = newId()): Mutation =>
   (doc) =>
     produce(doc, (d) => {
-      findFieldSet(d, target)?.custom.push({ id: newId(), label: "", value: "" });
+      findFieldSet(d, target)?.custom.push({ id, value: "" });
     });
 
 export const removeCustomField =
@@ -170,11 +172,18 @@ export const removeCustomField =
 
 // --- sections and items ------------------------------------------------------------------
 
+/**
+ * Adds a section at the end. Pass an id when the caller needs to find it afterwards, and a column when it
+ * must stay in the sidebar (or main column) of a sidebar template.
+ */
 export const addSection =
-  (type: SectionType): Mutation =>
+  (type: SectionType, id?: string, column?: "main" | "side"): Mutation =>
   (doc) =>
     produce(doc, (d) => {
-      d.data.sections.push(newSection(type));
+      const section = newSection(type);
+      if (id) section.id = id;
+      if (column) section.column = column;
+      d.data.sections.push(section);
     });
 
 export const removeSection =
@@ -210,6 +219,40 @@ export const removeItem =
       if (!s) return;
       s.items = s.items.filter((i) => i.id !== itemId);
       if (s.items.length === 0) s.items.push(newItem());
+    });
+
+/** Adds an empty entry directly below another one. */
+export const addItemAfter =
+  (sectionId: string, afterItemId: string): Mutation =>
+  (doc) =>
+    produce(doc, (d) => {
+      const s = findSection(d, sectionId);
+      if (!s) return;
+      const at = s.items.findIndex((i) => i.id === afterItemId);
+      s.items.splice(at < 0 ? s.items.length : at + 1, 0, newItem());
+    });
+
+/** Chooses the icon for a standard contact field; null goes back to its default. */
+export const setFieldIcon =
+  (field: string, choice: IconChoice | null): Mutation =>
+  (doc) =>
+    produce(doc, (d) => {
+      const icons = { ...(d.data.basics.icons ?? {}) };
+      if (choice === null) delete icons[field];
+      else icons[field] = choice;
+      if (Object.keys(icons).length > 0) d.data.basics.icons = icons;
+      else delete d.data.basics.icons;
+    });
+
+/** Chooses the icon for one of the user's own fields; null removes it. */
+export const setCustomIcon =
+  (target: FieldTarget, fieldId: string, icon: IconRef | null): Mutation =>
+  (doc) =>
+    produce(doc, (d) => {
+      const c = findFieldSet(d, target)?.custom.find((x) => x.id === fieldId);
+      if (!c) return;
+      if (icon === null) delete c.icon;
+      else c.icon = icon;
     });
 
 export const moveItem =

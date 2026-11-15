@@ -1,3 +1,4 @@
+import { isIconChoice, isIconRef, type IconChoice } from "./icons";
 import { BASICS_FIELDS, SECTION_SCHEMAS } from "./schemas";
 import type { Basics, CustomField, FieldSet, Item, ResumeData, Section, SectionType } from "./types";
 
@@ -52,11 +53,14 @@ function normaliseFieldSet(raw: unknown): FieldSet {
         .filter((c) => c && typeof c === "object")
         .map((c) => {
           const cf = c as Record<string, unknown>;
+          // Older resumes had a separate name for these. It is folded into the text, so nothing visible changes.
+          const name = str(cf.label).trim();
+          const text = str(cf.value);
           return {
             id: str(cf.id) || newId(),
-            label: str(cf.label),
-            value: str(cf.value),
+            value: name && text ? `${name}: ${text}` : text,
             ...(cf.hidden === true ? { hidden: true } : {}),
+            ...(isIconRef(cf.icon) ? { icon: cf.icon } : {}),
           };
         })
     : [];
@@ -67,9 +71,16 @@ function normaliseFieldSet(raw: unknown): FieldSet {
 export function normaliseData(raw: unknown): ResumeData {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const rawBasics = (r.basics && typeof r.basics === "object" ? r.basics : {}) as Record<string, unknown>;
+  const icons: Record<string, IconChoice> = {};
+  if (rawBasics.icons && typeof rawBasics.icons === "object") {
+    for (const [k, v] of Object.entries(rawBasics.icons as Record<string, unknown>)) {
+      if (isIconChoice(v)) icons[k] = v;
+    }
+  }
   const basics: Basics = {
     ...normaliseFieldSet(rawBasics),
     photo: typeof rawBasics.photo === "string" && rawBasics.photo.startsWith("data:image/") ? rawBasics.photo : null,
+    ...(Object.keys(icons).length > 0 ? { icons } : {}),
   };
 
   if (!Array.isArray(r.sections)) return { basics, sections: emptyData().sections };
@@ -97,6 +108,7 @@ export function normaliseData(raw: unknown): ResumeData {
         title: str(sec.title) || SECTION_SCHEMAS[type].label,
         ...(sec.hidden === true ? { hidden: true } : {}),
         ...(sec.pageBreakBefore === true ? { pageBreakBefore: true } : {}),
+        ...(sec.column === "main" || sec.column === "side" ? { column: sec.column } : {}),
         items: items.length > 0 ? items : [newItem()],
       };
     });

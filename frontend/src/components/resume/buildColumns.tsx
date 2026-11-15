@@ -1,11 +1,15 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 
 import { fontFamily, mix, spacingFactor } from "@/lib/resume/design";
-import { SECTION_SCHEMAS, type SectionSchema } from "@/lib/resume/schemas";
-import type { TemplateConfig } from "@/lib/resume/templates";
+import { BASICS_FIELDS, SECTION_SCHEMAS, type SectionSchema } from "@/lib/resume/schemas";
+import { columnOf, columnToStore, sectionTypesFor, type TemplateConfig } from "@/lib/resume/templates";
 import type { EditRef, FieldSet, Item, ResumeDoc, Section, StyleTarget } from "@/lib/resume/types";
 
 import { Lines, Txt, editKey } from "./Editable";
+import { DEFAULT_CONTACT_ICON } from "@/lib/resume/icons";
+import { setCustomIcon, setFieldIcon, toggleItemHidden, toggleSectionHidden } from "@/lib/resume/mutations";
+import { ContactIcon } from "./ContactIcon";
+import { AddFieldPlaceholder, AddSectionPlaceholder, HeaderActions, HiddenRow, ItemActions, PhotoSlot, SectionActions } from "./visual/Actions";
 
 /**
  * Turns a resume plus a template into blocks that can be measured and placed on pages.
@@ -35,6 +39,8 @@ type Ctx = {
   /** Base spacing unit in pixels. */
   u: number;
   focusedKey: string | null;
+  /** Page-first editor: show greyed placeholders for empty things. */
+  ghost: boolean;
   variant: "main" | "side";
   /** Text colour on the sidebar background. */
   fg: string;
@@ -74,8 +80,15 @@ function textStyle(c: Ctx, target: StyleTarget, fallbackColor?: string, em = 1):
 }
 
 function present(c: Ctx, ref: EditRef, value: string): boolean {
-  return value.trim() !== "" || c.focusedKey === editKey(ref);
+  return c.ghost || value.trim() !== "" || c.focusedKey === editKey(ref);
 }
+
+/** The hint shown for an empty field, only while placeholders are on. */
+function ph(c: Ctx, text: string): string | undefined {
+  return c.ghost ? text : undefined;
+}
+
+const BASICS_LABEL = Object.fromEntries(BASICS_FIELDS.map((f) => [f.key, f.label]));
 
 function join(parts: ReactNode[], separator: ReactNode): ReactNode {
   return parts.map((p, i) => (
@@ -96,58 +109,75 @@ function customFieldNode(
   kind: "basics" | "item",
   scope: { sectionId?: string; itemId?: string },
   target: StyleTarget,
+  iconColor: string,
 ) {
   const style = textStyle(c, target);
   const nodes: ReactNode[] = [];
   for (const f of fs.custom) {
     if (f.hidden) continue;
-    const valueRef: EditRef =
+    const ref: EditRef =
       kind === "basics"
-        ? { kind: "basicsCustom", id: f.id, part: "value" }
-        : { kind: "itemCustom", sectionId: scope.sectionId!, itemId: scope.itemId!, id: f.id, part: "value" };
-    const labelRef: EditRef = { ...valueRef, part: "label" } as EditRef;
-    if (!present(c, valueRef, f.value)) continue;
-    const showLabel = present(c, labelRef, f.label);
+        ? { kind: "basicsCustom", id: f.id }
+        : { kind: "itemCustom", sectionId: scope.sectionId!, itemId: scope.itemId!, id: f.id };
+    if (!present(c, ref, f.value)) continue;
+    const icon =
+      kind === "basics" && c.doc.design.contactIcons ? (
+        <ContactIcon
+          id={f.icon ?? null}
+          color={iconColor}
+          choose={(choice) => setCustomIcon({ kind: "basics" }, f.id, choice === "none" || choice === null ? null : choice)}
+        />
+      ) : null;
+    const text = <Txt edit={ref} value={f.value} style={style} placeholder={ph(c, kind === "basics" ? "Your detail" : "Extra detail")} />;
     nodes.push(
-      <span key={f.id}>
-        {showLabel && (
-          <>
-            <Txt edit={labelRef} value={f.label} style={style} />
-            {": "}
-          </>
-        )}
-        <Txt edit={valueRef} value={f.value} style={style} />
-      </span>,
+      icon ? (
+        <span key={f.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+          {icon}
+          {text}
+        </span>
+      ) : (
+        <span key={f.id}>{text}</span>
+      ),
     );
   }
   return nodes;
 }
 
-function contactParts(c: Ctx): ReactNode[] {
+/** Icons are drawn in the accent colour on the page, and in the surrounding text colour on a coloured background. */
+function contactParts(c: Ctx, iconColor = c.variant === "main" ? c.accent : "currentColor"): ReactNode[] {
   const b = c.doc.data.basics;
+  const showIcons = c.doc.design.contactIcons;
   const parts: ReactNode[] = [];
   for (const key of CONTACT_KEYS) {
     if (b.hiddenFields[key]) continue;
     const ref: EditRef = { kind: "basics", field: key };
     const value = b.values[key] ?? "";
-    if (present(c, ref, value)) parts.push(<Txt key={key} edit={ref} value={value} style={textStyle(c, "contact")} />);
+    if (!present(c, ref, value)) continue;
+    const text = <Txt key={key} edit={ref} value={value} style={textStyle(c, "contact")} placeholder={ph(c, BASICS_LABEL[key])} />;
+    if (!showIcons) {
+      parts.push(text);
+      continue;
+    }
+    const choice = b.icons?.[key];
+    const id = choice === "none" ? null : (choice ?? DEFAULT_CONTACT_ICON[key] ?? null);
+    parts.push(
+      <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+        <ContactIcon id={id} color={iconColor} choose={(next) => setFieldIcon(key, next)} defaultId={DEFAULT_CONTACT_ICON[key]} />
+        {text}
+      </span>,
+    );
   }
-  return [...parts, ...customFieldNode(c, b, "basics", {}, "contact")];
+  return [...parts, ...customFieldNode(c, b, "basics", {}, "contact", iconColor)];
+}
+
+/** True when the template should draw a photo spot: there is a photo, or placeholders show an empty slot. */
+function hasPhotoSlot(c: Ctx): boolean {
+  return !!c.doc.data.basics.photo || c.ghost;
 }
 
 function photoNode(c: Ctx, size: number, round: boolean): ReactNode {
-  const photo = c.doc.data.basics.photo;
-  if (!photo) return null;
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={photo}
-      alt=""
-      width={size}
-      height={size}
-      style={{ width: size, height: size, objectFit: "cover", borderRadius: round ? "50%" : 6, display: "block" }}
-    />
-  );
+  if (!hasPhotoSlot(c)) return null;
+  return <PhotoSlot photo={c.doc.data.basics.photo} size={size} round={round} />;
 }
 
 function nameAndHeadline(c: Ctx, nameColor?: string, headlineColor?: string): ReactNode {
@@ -160,12 +190,12 @@ function nameAndHeadline(c: Ctx, nameColor?: string, headlineColor?: string): Re
     <>
       {!b.hiddenFields.fullName && present(c, nameRef, name) && (
         <div style={{ lineHeight: 1.15, ...textStyle(c, "name", nameColor ?? c.ink, 2.1) }}>
-          <Txt edit={nameRef} value={name} />
+          <Txt edit={nameRef} value={name} placeholder={ph(c, "Your name")} />
         </div>
       )}
       {!b.hiddenFields.headline && present(c, headRef, headline) && (
         <div style={{ marginTop: c.u * 0.3, ...textStyle(c, "headline", headlineColor ?? c.accent, 1.15) }}>
-          <Txt edit={headRef} value={headline} />
+          <Txt edit={headRef} value={headline} placeholder={ph(c, "Professional title")} />
         </div>
       )}
     </>
@@ -176,21 +206,33 @@ function hasHeader(c: Ctx): boolean {
   const b = c.doc.data.basics;
   const name = !b.hiddenFields.fullName && present(c, { kind: "basics", field: "fullName" }, b.values.fullName ?? "");
   const head = !b.hiddenFields.headline && present(c, { kind: "basics", field: "headline" }, b.values.headline ?? "");
-  return name || head || contactParts(c).length > 0 || !!b.photo;
+  return name || head || contactParts(c).length > 0 || hasPhotoSlot(c);
 }
 
 function headerBlock(c: Ctx): Block | null {
   if (!hasHeader(c)) return null;
   const { header } = c.template;
-  const contact = contactParts(c);
-  const sep = <span style={{ padding: "0 0.45em", opacity: 0.6 }}>·</span>;
+  const contact = contactParts(c, header === "banner" ? "currentColor" : undefined);
+  // With icons on, the icons mark each detail, so a plain gap replaces the dot.
+  const sep = c.doc.design.contactIcons ? (
+    <span style={{ padding: "0 0.7em" }} />
+  ) : (
+    <span style={{ padding: "0 0.45em", opacity: 0.6 }}>·</span>
+  );
   const pad = c.u * 1.6;
+
+  const withActions = (node: ReactNode, inside = false): ReactNode => (
+    <div className="rb-hov">
+      {node}
+      <HeaderActions fs={c.doc.data.basics} fields={BASICS_FIELDS} inside={inside} />
+    </div>
+  );
 
   if (header === "banner") {
     const fg = onAccent(c.accent);
     return {
       key: "header",
-      node: (
+      node: withActions(
         <div
           style={{
             background: c.accent,
@@ -207,9 +249,11 @@ function headerBlock(c: Ctx): Block | null {
           <div>
             {nameAndHeadline(c, fg, fg)}
             {contact.length > 0 && <div style={{ marginTop: c.u, fontSize: "0.95em" }}>{join(contact, sep)}</div>}
+            {c.ghost && <AddFieldPlaceholder align="start" />}
           </div>
           {photoNode(c, 96, true)}
-        </div>
+        </div>,
+        true,
       ),
     };
   }
@@ -217,30 +261,40 @@ function headerBlock(c: Ctx): Block | null {
   if (header === "center") {
     return {
       key: "header",
-      node: (
+      node: withActions(
         <div style={{ textAlign: "center", paddingBottom: pad }}>
-          {c.doc.data.basics.photo && <div style={{ display: "flex", justifyContent: "center", marginBottom: c.u }}>{photoNode(c, 88, true)}</div>}
+          {hasPhotoSlot(c) && <div style={{ display: "flex", justifyContent: "center", marginBottom: c.u }}>{photoNode(c, 88, true)}</div>}
           {nameAndHeadline(c)}
           {contact.length > 0 && (
             <div style={{ marginTop: c.u * 0.8, fontSize: "0.95em", color: c.muted }}>{join(contact, sep)}</div>
           )}
-        </div>
+          {c.ghost && (
+            <div style={{ color: c.muted }}>
+              <AddFieldPlaceholder align="center" />
+            </div>
+          )}
+        </div>,
       ),
     };
   }
 
   return {
     key: "header",
-    node: (
+    node: withActions(
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20, paddingBottom: pad }}>
         <div>
           {nameAndHeadline(c)}
           {contact.length > 0 && (
             <div style={{ marginTop: c.u * 0.8, fontSize: "0.95em", color: c.muted }}>{join(contact, sep)}</div>
           )}
+          {c.ghost && (
+            <div style={{ color: c.muted }}>
+              <AddFieldPlaceholder align="start" />
+            </div>
+          )}
         </div>
         {photoNode(c, 84, false)}
-      </div>
+      </div>,
     ),
   };
 }
@@ -258,12 +312,13 @@ function nameBlock(c: Ctx): Block | null {
 /** Sidebar layout: photo and contact details, stacked, at the top of the sidebar. */
 function sidebarContactBlock(c: Ctx): Block | null {
   const contact = contactParts(c);
-  if (contact.length === 0 && !c.doc.data.basics.photo) return null;
+  if (contact.length === 0 && !hasPhotoSlot(c)) return null;
   return {
     key: "contact",
     node: (
-      <div style={{ paddingBottom: c.u * 2 }}>
-        {c.doc.data.basics.photo && (
+      <div className="rb-hov" style={{ paddingBottom: c.u * 2 }}>
+        <HeaderActions fs={c.doc.data.basics} fields={BASICS_FIELDS} />
+        {hasPhotoSlot(c) && (
           <div style={{ display: "flex", justifyContent: "center", marginBottom: c.u * 1.5 }}>{photoNode(c, 112, true)}</div>
         )}
         {contact.length > 0 && (
@@ -273,6 +328,11 @@ function sidebarContactBlock(c: Ctx): Block | null {
                 {p}
               </div>
             ))}
+          </div>
+        )}
+        {c.ghost && (
+          <div style={{ fontSize: "0.92em" }}>
+            <AddFieldPlaceholder align="start" />
           </div>
         )}
       </div>
@@ -340,18 +400,19 @@ function EntryItem({ c, section, schema, item }: { c: Ctx; section: Section; sch
   const extras = schema.fields.map((f) => f.key).filter((k) => !used.has(k) && shown(k));
   const dates = [schema.dateStart, schema.dateEnd].filter(shown) as string[];
   const bodyField = schema.fields.find((f) => f.key === schema.body);
-  const custom = customFieldNode(c, item, "item", { sectionId: section.id, itemId: item.id }, "subtitle");
+  const custom = customFieldNode(c, item, "item", { sectionId: section.id, itemId: item.id }, "subtitle", "currentColor");
   const small: CSSProperties = { color: c.muted, fontSize: "0.95em" };
+  const hint = (field: string) => ph(c, schema.fields.find((f) => f.key === field)?.label ?? field);
 
   return (
     <div>
       {(shown(schema.title) || dates.length > 0) && (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-          <div style={textStyle(c, "itemTitle", c.ink)}>{shown(schema.title) && <Txt edit={ref(schema.title!)} value={value(schema.title)} />}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", flexWrap: c.variant === "side" ? "wrap" : undefined }}>
+          <div style={textStyle(c, "itemTitle", c.ink)}>{shown(schema.title) && <Txt edit={ref(schema.title!)} value={value(schema.title)} placeholder={hint(schema.title!)} />}</div>
           {dates.length > 0 && (
-            <div style={{ ...small, whiteSpace: "nowrap" }}>
+            <div style={{ ...small, whiteSpace: c.variant === "side" ? "normal" : "nowrap", overflowWrap: "anywhere" }}>
               {join(
-                dates.map((d) => <Txt key={d} edit={ref(d)} value={value(d)} style={textStyle(c, "dates")} />),
+                dates.map((d) => <Txt key={d} edit={ref(d)} value={value(d)} style={textStyle(c, "dates")} placeholder={hint(d)} />),
                 " – ",
               )}
             </div>
@@ -362,7 +423,13 @@ function EntryItem({ c, section, schema, item }: { c: Ctx; section: Section; sch
         <div style={small}>
           {join(
             subtitle.map((s) => (
-              <Txt key={s} edit={ref(s)} value={value(s)} style={textStyle(c, s === "location" ? "location" : "subtitle", c.muted)} />
+              <Txt
+                key={s}
+                edit={ref(s)}
+                value={value(s)}
+                style={textStyle(c, s === "location" ? "location" : "subtitle", c.muted)}
+                placeholder={hint(s)}
+              />
             )),
             " · ",
           )}
@@ -371,7 +438,7 @@ function EntryItem({ c, section, schema, item }: { c: Ctx; section: Section; sch
       {extras.length > 0 && (
         <div style={small}>
           {join(
-            extras.map((e) => <Txt key={e} edit={ref(e)} value={value(e)} style={textStyle(c, "subtitle", c.muted)} />),
+            extras.map((e) => <Txt key={e} edit={ref(e)} value={value(e)} style={textStyle(c, "subtitle", c.muted)} placeholder={hint(e)} />),
             " · ",
           )}
         </div>
@@ -382,11 +449,12 @@ function EntryItem({ c, section, schema, item }: { c: Ctx; section: Section; sch
             edit={ref(schema.body!)}
             value={value(schema.body)}
             focusedKey={c.focusedKey}
+            ghostPlaceholder={ph(c, bodyField.placeholder ?? bodyField.label)}
             style={{ marginTop: c.u * 0.4, ...textStyle(c, "bullets") }}
           />
         ) : (
           <div style={{ marginTop: c.u * 0.4, ...textStyle(c, "bullets") }}>
-            <Txt edit={ref(schema.body!)} value={value(schema.body)} multiline />
+            <Txt edit={ref(schema.body!)} value={value(schema.body)} multiline placeholder={hint(schema.body!)} />
           </div>
         ))}
       {custom.length > 0 && (
@@ -408,8 +476,13 @@ function RowItem({ c, section, schema, item }: { c: Ctx; section: Section; schem
   const showValue = !item.hiddenFields[valueKey] && present(c, ref(valueKey), item.values[valueKey] ?? "");
   if (!showLabel && !showValue) return null;
 
-  const label = showLabel && <Txt edit={ref(labelKey)} value={item.values[labelKey] ?? ""} style={textStyle(c, "skillLabel")} />;
-  const value = showValue && <Txt edit={ref(valueKey)} value={item.values[valueKey] ?? ""} style={textStyle(c, "skillValue")} />;
+  const fieldLabel = (key: string) => schema.fields.find((f) => f.key === key)?.label ?? key;
+  const label = showLabel && (
+    <Txt edit={ref(labelKey)} value={item.values[labelKey] ?? ""} style={textStyle(c, "skillLabel")} placeholder={ph(c, fieldLabel(labelKey))} />
+  );
+  const value = showValue && (
+    <Txt edit={ref(valueKey)} value={item.values[valueKey] ?? ""} style={textStyle(c, "skillValue")} placeholder={ph(c, fieldLabel(valueKey))} />
+  );
 
   if (c.variant === "side") {
     return (
@@ -428,18 +501,29 @@ function RowItem({ c, section, schema, item }: { c: Ctx; section: Section; schem
   );
 }
 
-function sectionBlocks(c: Ctx, section: Section): Block[] {
-  if (section.hidden) return [];
+type Neighbours = { prevId?: string; nextId?: string };
+
+function sectionBlocks(c: Ctx, section: Section, nav: Neighbours): Block[] {
+  if (section.hidden) {
+    // Placeholders on: leave a small row so the section can be brought back.
+    return c.ghost ? [{ key: section.id, node: <HiddenRow label={section.title} show={toggleSectionHidden(section.id)} /> }] : [];
+  }
   const schema = SECTION_SCHEMAS[section.type];
-  const items = section.items.filter(
-    (i) => !i.hidden && (hasVisibleContent(schema, i) || (c.focusedKey?.includes(i.id) ?? false)),
-  );
+  const items = c.ghost
+    ? section.items
+    : section.items.filter((i) => !i.hidden && (hasVisibleContent(schema, i) || (c.focusedKey?.includes(i.id) ?? false)));
   if (items.length === 0) return [];
 
-  const heading = <SectionHeading c={c} section={section} />;
+  const heading = (
+    <div className="rb-hov" data-section-id={section.id}>
+      <SectionHeading c={c} section={section} />
+      <SectionActions section={section} prevId={nav.prevId} nextId={nav.nextId} canBreak={c.variant === "main"} />
+    </div>
+  );
   const gap = c.u * 1.1;
   const sectionEnd = c.u * 2;
   const breakBefore = c.variant === "main" && !!section.pageBreakBefore;
+  const around = (i: number): Neighbours => ({ prevId: items[i - 1]?.id, nextId: items[i + 1]?.id });
 
   if (schema.layout === "entry") {
     return items.map((item, index) => ({
@@ -448,7 +532,14 @@ function sectionBlocks(c: Ctx, section: Section): Block[] {
       node: (
         <div style={{ paddingBottom: index === items.length - 1 ? sectionEnd : gap }}>
           {index === 0 && heading}
-          <EntryItem c={c} section={section} schema={schema} item={item} />
+          {item.hidden ? (
+            <HiddenRow label="Entry" show={toggleItemHidden(section.id, item.id)} />
+          ) : (
+            <div className="rb-hov">
+              <EntryItem c={c} section={section} schema={schema} item={item} />
+              <ItemActions section={section} item={item} variant="entry" {...around(index)} />
+            </div>
+          )}
         </div>
       ),
     }));
@@ -461,10 +552,20 @@ function sectionBlocks(c: Ctx, section: Section): Block[] {
           edit={{ kind: "item", sectionId: section.id, itemId: items[0].id, field: schema.body! }}
           value={items[0].values[schema.body!] ?? ""}
           multiline
+          placeholder={ph(c, schema.fields.find((f) => f.key === schema.body)?.placeholder ?? "Write here")}
         />
       </div>
     ) : (
-      items.map((item) => <RowItem key={item.id} c={c} section={section} schema={schema} item={item} />)
+      items.map((item, index) =>
+        item.hidden ? (
+          <HiddenRow key={item.id} label="Entry" show={toggleItemHidden(section.id, item.id)} />
+        ) : (
+          <div key={item.id} className="rb-hov">
+            <RowItem c={c} section={section} schema={schema} item={item} />
+            <ItemActions section={section} item={item} variant="row" {...around(index)} />
+          </div>
+        )
+      )
     );
 
   return [
@@ -483,11 +584,16 @@ function sectionBlocks(c: Ctx, section: Section): Block[] {
 
 // --- public ------------------------------------------------------------------------------
 
-export function buildColumns(doc: ResumeDoc, template: TemplateConfig, focusedKey: string | null): Columns {
+export function buildColumns(
+  doc: ResumeDoc,
+  template: TemplateConfig,
+  focusedKey: string | null,
+  ghost = false,
+): Columns {
   const accent = doc.design.accent;
   const u = 8 * spacingFactor(doc.design.spacing);
   const ink = doc.design.textColor;
-  const base = { doc, template, accent, ink, muted: mix(ink, "#ffffff", 0.3), u, focusedKey };
+  const base = { doc, template, accent, ink, muted: mix(ink, "#ffffff", 0.3), u, focusedKey, ghost };
   const mainCtx: Ctx = { ...base, variant: "main", fg: ink };
   const sideFg = onAccent(accent);
   const sideCtx: Ctx = { ...base, variant: "side", fg: sideFg, ink: sideFg, muted: sideFg };
@@ -501,13 +607,51 @@ export function buildColumns(doc: ResumeDoc, template: TemplateConfig, focusedKe
     const name = nameBlock(mainCtx);
     if (name) main.push(name);
     for (const section of doc.data.sections) {
-      const toSide = template.sidebarSections?.includes(section.type) ?? false;
-      (toSide ? side : main).push(...sectionBlocks(toSide ? sideCtx : mainCtx, section));
+      const toSide = columnOf(template, section) === "side";
+      // Moving a section swaps it with its neighbour in the same column, so the move is always visible.
+      const column = doc.data.sections.filter((s) => (columnOf(template, s) === "side") === toSide);
+      const at = column.findIndex((s) => s.id === section.id);
+      const nav = { prevId: column[at - 1]?.id, nextId: column[at + 1]?.id };
+      (toSide ? side : main).push(...sectionBlocks(toSide ? sideCtx : mainCtx, section, nav));
     }
   } else {
     const header = headerBlock(mainCtx);
     if (header) main.push(header);
-    for (const section of doc.data.sections) main.push(...sectionBlocks(mainCtx, section));
+    const all = doc.data.sections;
+    all.forEach((section, i) => main.push(...sectionBlocks(mainCtx, section, { prevId: all[i - 1]?.id, nextId: all[i + 1]?.id })));
+  }
+
+  // Placeholders on: an always-visible "+ Add section" closes the page, after every existing section.
+  // One placeholder per column on a sidebar template, each listing only what belongs there, so a new
+  // section always lands where the user clicked.
+  if (ghost) {
+    const sidebar = template.layout === "sidebar";
+    main.push({
+      key: "add-section",
+      node: (
+        <AddSectionPlaceholder
+          color={accent}
+          gap={u}
+          types={sectionTypesFor(template, "main")}
+          columnFor={(type) => columnToStore(template, type, "main")}
+          label={sidebar ? "+ Add to main column" : "+ Add section"}
+        />
+      ),
+    });
+    if (sidebar) {
+      side.push({
+        key: "add-section-side",
+        node: (
+          <AddSectionPlaceholder
+            color={sideFg}
+            gap={u}
+            types={sectionTypesFor(template, "side")}
+            columnFor={(type) => columnToStore(template, type, "side")}
+            label="+ Add to sidebar"
+          />
+        ),
+      });
+    }
   }
 
   return { main, side };

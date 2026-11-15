@@ -8,7 +8,7 @@ import { getTemplate, type TemplateConfig } from "@/lib/resume/templates";
 import type { EditRef, ResumeDoc } from "@/lib/resume/types";
 
 import { buildColumns, onAccent, type Block } from "./buildColumns";
-import { EditContext, type EditApi } from "./Editable";
+import { EditContext, type EditApi, type FocusRequest, type VisualApi } from "./Editable";
 
 /** A4 at 96 dpi. */
 export const PAGE_W = 794;
@@ -73,17 +73,22 @@ type Props = {
   onPageCount?: (count: number) => void;
   /** Called with the key of the text being edited (or null when focus leaves it). */
   onFocusKey?: (key: string | null) => void;
+  /** Page-first editor: tools on the page itself. */
+  visual?: VisualApi | null;
+  /** Show greyed placeholders for empty things (edit view only; never exported). */
+  ghost?: boolean;
 };
 
-export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, onPageCount, onFocusKey }: Props) {
+export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, onPageCount, onFocusKey, visual = null, ghost = false }: Props) {
   const template = getTemplate(doc.templateId);
   const geo = useMemo(() => geometry(template), [template]);
   const canEdit = editable && !!onEdit && mode === "preview";
 
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  const showGhost = ghost && mode === "preview";
   const columns = useMemo(
-    () => buildColumns(doc, template, canEdit ? focusedKey : null),
-    [doc, template, canEdit, focusedKey],
+    () => buildColumns(doc, template, canEdit ? focusedKey : null, showGhost),
+    [doc, template, canEdit, focusedKey, showGhost],
   );
 
   // --- measuring -------------------------------------------------------------------------
@@ -171,9 +176,21 @@ export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, 
     },
     [onFocusKey],
   );
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
+  const requestFocus = useCallback(
+    (request: FocusRequest) => {
+      setFocus(request.key); // so an empty new line is drawn
+      setFocusRequest(request);
+    },
+    [setFocus],
+  );
+  const clearFocusRequest = useCallback(() => setFocusRequest(null), []);
   const editApi = useMemo<EditApi | null>(
-    () => (canEdit ? { onEdit: onEdit!, focusedKey, setFocusedKey: setFocus } : null),
-    [canEdit, onEdit, focusedKey, setFocus],
+    () =>
+      canEdit
+        ? { onEdit: onEdit!, focusedKey, setFocusedKey: setFocus, focusRequest, requestFocus, clearFocusRequest, visual }
+        : null,
+    [canEdit, onEdit, focusedKey, setFocus, focusRequest, requestFocus, clearFocusRequest, visual],
   );
 
   const wrap = (b: Block) => (

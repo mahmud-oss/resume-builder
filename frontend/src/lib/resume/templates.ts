@@ -1,5 +1,6 @@
 import type { Design, SectionType, StyleTarget, TextStyle } from "./types";
 import { DEFAULT_DESIGN, DEFAULT_STYLES } from "./design";
+import { ADDABLE_SECTIONS } from "./schemas";
 
 /**
  * A template is data, not code: it chooses a layout and a few style options, and one shared
@@ -15,6 +16,8 @@ export type TemplateConfig = {
   heading: "rule" | "caps" | "bar" | "plain";
   /** Sections drawn in the sidebar (sidebar layout only). */
   sidebarSections?: SectionType[];
+  /** Section types the user may put in either column of a sidebar template (they remember which). */
+  bothColumns?: SectionType[];
   /** Page margins in pixels. */
   margin: { top: number; side: number };
   /** Starting design for new resumes made with this template (the first theme). */
@@ -70,6 +73,7 @@ export const TEMPLATES: TemplateConfig[] = [
     header: "left",
     heading: "bar",
     sidebarSections: ["skills", "languages", "certifications"],
+    bothColumns: ["custom"],
     margin: { top: 0, side: 0 },
     ...withThemes([
       ["Blue Sidebar", look({ font: "inter", accent: "#2563eb", fontSize: 10 })],
@@ -120,6 +124,39 @@ export const TEMPLATES: TemplateConfig[] = [
     ]),
   },
 ];
+
+/** True when a section of this type may sit in the given column of the template. */
+function allowedIn(template: TemplateConfig, type: SectionType, column: "main" | "side"): boolean {
+  if (template.layout !== "sidebar") return column === "main";
+  const sideOnly = template.sidebarSections?.includes(type) ?? false;
+  const both = template.bothColumns?.includes(type) ?? false;
+  return column === "side" ? sideOnly || both : !sideOnly;
+}
+
+/**
+ * The section types a column offers. One-column templates have only "main". On a sidebar template the
+ * sidebar types are offered in the sidebar only, the other types in the main column only, and the types
+ * in `bothColumns` in either.
+ */
+export function sectionTypesFor(template: TemplateConfig, column: "main" | "side"): SectionType[] {
+  return ADDABLE_SECTIONS.filter((t) => allowedIn(template, t, column));
+}
+
+/**
+ * The column a section is drawn in. A remembered choice wins when this template allows it; otherwise the
+ * type decides.
+ */
+export function columnOf(template: TemplateConfig, section: { type: SectionType; column?: "main" | "side" }): "main" | "side" {
+  if (template.layout !== "sidebar") return "main";
+  if (section.column && allowedIn(template, section.type, section.column)) return section.column;
+  return template.sidebarSections?.includes(section.type) ? "side" : "main";
+}
+
+/** What to store on a new section so it stays in the column it was added to: only when its type alone would not put it there. */
+export function columnToStore(template: TemplateConfig, type: SectionType, column: "main" | "side"): "main" | "side" | undefined {
+  const byType = template.sidebarSections?.includes(type) ? "side" : "main";
+  return template.layout === "sidebar" && column !== byType ? column : undefined;
+}
 
 export const DEFAULT_TEMPLATE_ID = "classic";
 

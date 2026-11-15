@@ -27,7 +27,7 @@ type Props = {
   fields: FieldDef[];
   target: FieldTarget;
   valueRef: (field: string) => EditRef;
-  customRef: (id: string, part: "label" | "value") => EditRef;
+  customRef: (id: string) => EditRef;
   edit: Edit;
   /** Prefix that keeps element ids unique when several forms are on screen. */
   idPrefix: string;
@@ -106,42 +106,47 @@ export function FieldSetEditor({ fs, fields, target, valueRef, customRef, edit, 
         );
       })}
 
-      {fs.custom.map((c) => (
-        <div key={c.id} className="rounded-md border border-slate-200 bg-slate-50 p-2">
-          <div className="flex items-center gap-1">
+      {fs.custom.map((c) => {
+        const id = `${idPrefix}-custom-${c.id}`;
+        const ref = customRef(c.id);
+        const name = scope === "basics" ? "Your detail" : "Extra detail";
+        return (
+          <div key={c.id}>
+            <div className="mb-1 flex items-center justify-between">
+              <label htmlFor={id} className="text-xs font-medium text-slate-700">
+                {name}
+                {c.hidden && <span className="ml-1 font-normal text-slate-500">(hidden on CV)</span>}
+              </label>
+              <div className="flex items-center">
+                <IconButton
+                  label={c.hidden ? `Show ${name} on CV` : `Hide ${name} from CV`}
+                  onClick={() => edit(toggleCustomFieldHidden(target, c.id))}
+                  className="!h-6 !w-6"
+                >
+                  {c.hidden ? <EyeOffIcon /> : <EyeIcon />}
+                </IconButton>
+                <IconButton label={`Remove ${name}`} onClick={() => edit(removeCustomField(target, c.id))} className="!h-6 !w-6">
+                  <TrashIcon />
+                </IconButton>
+              </div>
+            </div>
             <input
-              aria-label="Custom field name"
-              className={`${inputClass} font-medium`}
-              placeholder="Field name, e.g. Father's name"
-              value={c.label}
-              onChange={(e) => edit(applyEdit(customRef(c.id, "label"), e.target.value), editKey(customRef(c.id, "label")))}
+              id={id}
+              className={`${inputClass} ${c.hidden ? "opacity-60" : ""}`}
+              placeholder={scope === "basics" ? "e.g. Nationality: Bangladeshi" : "e.g. GPA: 3.8"}
+              value={c.value}
+              onChange={(e) => edit(applyEdit(ref, e.target.value), editKey(ref))}
             />
-            <IconButton
-              label={c.hidden ? "Show on CV" : "Hide from CV"}
-              onClick={() => edit(toggleCustomFieldHidden(target, c.id))}
-            >
-              {c.hidden ? <EyeOffIcon /> : <EyeIcon />}
-            </IconButton>
-            <IconButton label="Remove field" onClick={() => edit(removeCustomField(target, c.id))}>
-              <TrashIcon />
-            </IconButton>
           </div>
-          <input
-            aria-label={`${c.label || "Custom field"} value`}
-            className={`${inputClass} mt-1.5 ${c.hidden ? "opacity-60" : ""}`}
-            placeholder="Value"
-            value={c.value}
-            onChange={(e) => edit(applyEdit(customRef(c.id, "value"), e.target.value), editKey(customRef(c.id, "value")))}
-          />
-        </div>
-      ))}
+        );
+      })}
 
       <button
         type="button"
         onClick={() => edit(addCustomField(target))}
         className="text-xs font-medium text-brand hover:underline"
       >
-        + Add your own field
+        + Add your own detail
       </button>
     </div>
   );

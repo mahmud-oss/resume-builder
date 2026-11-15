@@ -59,7 +59,7 @@ export function BasicsEditor({ basics, edit }: { basics: Basics; edit: Edit }) {
         fields={BASICS_FIELDS}
         target={{ kind: "basics" }}
         valueRef={(field) => ({ kind: "basics", field })}
-        customRef={(id, part) => ({ kind: "basicsCustom", id, part })}
+        customRef={(id) => ({ kind: "basicsCustom", id })}
         edit={edit}
         idPrefix="basics"
         scope="basics"

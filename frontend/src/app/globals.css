@@ -21,6 +21,9 @@ body {
 
 /* Text that can be edited directly in the resume preview. */
 .rb-editable {
+  /* The panel around the page does not select text, so a click on empty space cannot drop the cursor into nearby text. */
+  -webkit-user-select: text;
+  user-select: text;
   cursor: text;
   border-radius: 2px;
   outline: none;
@@ -39,4 +42,73 @@ body {
 @page {
   size: A4;
   margin: 0;
+}
+
+/* Page-first editor (version C): tools that appear when hovering a block of the resume. Never printed. */
+.rb-hov {
+  position: relative;
+}
+.rb-hov:hover {
+  outline: 1px dashed rgba(37, 99, 235, 0.4);
+  outline-offset: 3px;
+}
+.rb-act {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+  line-height: 1;
+  color: #111827;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.rb-hov:hover > .rb-act,
+.rb-hov:focus-within > .rb-act,
+.rb-act:has([data-open="true"]) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Greyed hint for empty text. Shown only while editing; the exported PDF never has it. */
+.rb-ph {
+  color: #9ca3af;
+}
+.rb-editable[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+}
+.rb-editable[data-placeholder]:empty {
+  display: inline-block;
+  min-width: 2ch;
+}
+
+/* On a coloured sidebar the grey hint would vanish; use the sidebar's own text colour, softened. */
+.rb-page aside .rb-ph,
+.rb-page aside .rb-editable[data-placeholder]:empty::before {
+  color: inherit;
+  opacity: 0.6;
+}
+
+
+/* Brief highlight on a section that was just added, so it is easy to spot where it went. */
+@keyframes rb-flash {
+  0% {
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.85);
+    background: rgba(245, 158, 11, 0.22);
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0);
+    background: rgba(245, 158, 11, 0);
+  }
+}
+.rb-flash {
+  animation: rb-flash 2s ease-out;
+  border-radius: 4px;
 }

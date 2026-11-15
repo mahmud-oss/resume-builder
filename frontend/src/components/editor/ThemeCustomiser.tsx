@@ -12,6 +12,22 @@ import { inputClass } from "./ui";
 export function ThemeCustomiser({ design, edit }: { design: Design; edit: Edit }) {
   return (
     <div className="space-y-6">
+      <section>
+        <h2 className="mb-2 font-semibold">Contact details</h2>
+        <label className="flex cursor-pointer items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={design.contactIcons}
+            onChange={(e) => edit(setDesign({ contactIcons: e.target.checked }))}
+          />
+          <span>
+            Show small icons beside phone, email, location and links
+            <span className="block text-xs text-slate-500">You can change each icon, or remove it, in the page editor.</span>
+          </span>
+        </label>
+      </section>
+
       <section className="space-y-4">
         <h2 className="font-semibold">Colours</h2>
         <div>

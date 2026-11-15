@@ -56,3 +56,26 @@ export const PageBreakIcon = () => (
     <path d="M4 12h3M10 12h4M17 12h3M7 3v6M17 21v-6" />
   </Svg>
 );
+
+export const PlusIcon = () => (
+  <Svg size={16}>
+    <path d="M12 5v14M5 12h14" />
+  </Svg>
+);
+export const ArrowUpIcon = () => (
+  <Svg size={16}>
+    <path d="M12 19V5M5 12l7-7 7 7" />
+  </Svg>
+);
+export const ArrowDownIcon = () => (
+  <Svg size={16}>
+    <path d="M12 5v14M19 12l-7 7-7-7" />
+  </Svg>
+);
+export const MoreIcon = () => (
+  <Svg size={16}>
+    <circle cx="5" cy="12" r="1.2" />
+    <circle cx="12" cy="12" r="1.2" />
+    <circle cx="19" cy="12" r="1.2" />
+  </Svg>
+);

@@ -1,14 +1,18 @@
+import type { IconChoice, IconRef } from "./icons";
+
 /**
  * The resume data record. It is independent of the template: switching template never
  * changes or loses anything stored here. Visibility (hidden flags) belongs to the data,
  * so a field the user hid stays hidden in every template.
  */
 
+/** A detail of the user's own. One piece of text, like every other field ("Nationality: Bangladeshi"). */
 export type CustomField = {
   id: string;
-  label: string;
   value: string;
   hidden?: boolean;
+  /** Icon to show beside this field when contact icons are on. */
+  icon?: IconRef;
 };
 
 /** A group of named values: the resume header, or one entry inside a section. */
@@ -41,12 +45,19 @@ export type Section = {
   hidden?: boolean;
   /** Start this section on a new page (manual page break). */
   pageBreakBefore?: boolean;
+  /**
+   * Which column of a sidebar template it sits in. Only stored when it cannot be worked out from the
+   * section's type, for example a custom section the user added to the sidebar.
+   */
+  column?: "main" | "side";
   items: Item[];
 };
 
 export type Basics = FieldSet & {
   /** A small square JPEG as a data URL, or null. */
   photo: string | null;
+  /** Icon chosen for a contact field, or "none". Fields not listed use their default icon. */
+  icons?: Record<string, IconChoice>;
 };
 
 export type ResumeData = {
@@ -95,6 +106,8 @@ export type Design = {
   textColor: string;
   spacing: SpacingId;
   styles: Record<StyleTarget, TextStyle>;
+  /** Show small icons beside phone, email and other contact details. Off unless the user turns it on. */
+  contactIcons: boolean;
 };
 
 /** Everything the editor works on and autosaves. */
@@ -108,7 +121,7 @@ export type ResumeDoc = {
 /** Points to one piece of editable text, so the preview can edit the data directly. */
 export type EditRef =
   | { kind: "basics"; field: string }
-  | { kind: "basicsCustom"; id: string; part: "label" | "value" }
+  | { kind: "basicsCustom"; id: string }
   | { kind: "item"; sectionId: string; itemId: string; field: string }
-  | { kind: "itemCustom"; sectionId: string; itemId: string; id: string; part: "label" | "value" }
+  | { kind: "itemCustom"; sectionId: string; itemId: string; id: string }
   | { kind: "sectionTitle"; sectionId: string };

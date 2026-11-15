@@ -8,14 +8,14 @@ import type { FontId } from "@/lib/resume/types";
 import type { Edit } from "./FieldEditors";
 import { Palette } from "./Palette";
 
-const FLAGS: { key: "bold" | "italic" | "underline" | "uppercase"; label: string; face: string }[] = [
+export const FLAGS: { key: "bold" | "italic" | "underline" | "uppercase"; label: string; face: string }[] = [
   { key: "bold", label: "Bold", face: "B" },
   { key: "italic", label: "Italic", face: "I" },
   { key: "underline", label: "Underline", face: "U" },
   { key: "uppercase", label: "Capitals", face: "AA" },
 ];
 
-const COLORS = [...TEXT_PALETTE.slice(1), ...ACCENT_PALETTE.slice(3, 13)];
+export const STYLE_COLORS = [...TEXT_PALETTE.slice(1), ...ACCENT_PALETTE.slice(3, 13)];
 
 const select =
   "rounded-md border border-slate-300 bg-white px-2 py-1 text-xs outline-none focus:border-brand focus:ring-2 focus:ring-brand/30";
@@ -85,7 +85,7 @@ export function StyleControls({ target, style, edit }: { target: StyleTarget; st
       <Palette
         label={`${info.label} colour`}
         value={style.color}
-        colors={COLORS}
+        colors={STYLE_COLORS}
         allowAuto
         onChange={(color, key) => edit(setTextStyle(target, { color }), key ? `style-${target}` : undefined)}
       />

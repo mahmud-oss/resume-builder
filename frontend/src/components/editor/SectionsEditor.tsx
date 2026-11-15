@@ -72,7 +72,7 @@ function ItemCard({ section, item, edit, canRemove }: { section: Section; item: 
               fields={schema.fields}
               target={{ kind: "item", sectionId: section.id, itemId: item.id }}
               valueRef={(field) => ({ kind: "item", sectionId: section.id, itemId: item.id, field })}
-              customRef={(id, part) => ({ kind: "itemCustom", sectionId: section.id, itemId: item.id, id, part })}
+              customRef={(id) => ({ kind: "itemCustom", sectionId: section.id, itemId: item.id, id })}
               edit={edit}
               idPrefix={`item-${item.id}`}
               scope={section.type}

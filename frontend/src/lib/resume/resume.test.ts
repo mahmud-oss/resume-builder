@@ -47,9 +47,9 @@ describe("editing", () => {
   it("adds and edits a custom field", () => {
     let doc = addCustomField({ kind: "basics" })(newDoc());
     const id = doc.data.basics.custom[0].id;
-    doc = applyEdit({ kind: "basicsCustom", id, part: "label" }, "Father's name")(doc);
-    doc = applyEdit({ kind: "basicsCustom", id, part: "value" }, "Example")(doc);
-    expect(doc.data.basics.custom[0]).toMatchObject({ label: "Father's name", value: "Example" });
+    doc = applyEdit({ kind: "basicsCustom", id }, "Father's name: Example")(doc);
+    expect(doc.data.basics.custom[0]).toMatchObject({ id, value: "Father's name: Example" });
+    expect(doc.data.basics.custom[0]).not.toHaveProperty("label");
   });
 
   it("adds a custom section and reorders sections", () => {

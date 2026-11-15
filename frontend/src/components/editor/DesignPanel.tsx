@@ -1,23 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import { ResumeCanvas } from "@/components/resume/ResumeCanvas";
 import { STYLE_TARGETS } from "@/lib/resume/design";
-import { sampleDoc } from "@/lib/resume/doc";
-import { setTemplate } from "@/lib/resume/mutations";
-import { TEMPLATES } from "@/lib/resume/templates";
 import type { Design, StyleTarget, TextStyle } from "@/lib/resume/types";
 
 import type { Edit } from "./FieldEditors";
 import { StyleControls } from "./StyleControls";
+import { TemplatePicker } from "./TemplatePicker";
 import { ThemeCustomiser } from "./ThemeCustomiser";
 import { ThemePicker } from "./ThemePicker";
-
-function TemplateThumb({ id }: { id: string }) {
-  const doc = useMemo(() => sampleDoc(id), [id]);
-  return <ResumeCanvas doc={doc} mode="thumb" />;
-}
 
 function StyleRow({ target, label, style, edit }: { target: StyleTarget; label: string; style: TextStyle; edit: Edit }) {
   const [open, setOpen] = useState(false);
@@ -66,22 +58,7 @@ export function DesignPanel({
         <p className="mb-3 text-xs text-slate-500">
           Switching keeps everything you wrote and any fields you hid. The look changes to the new template&apos;s first theme.
         </p>
-        <div className="grid grid-cols-2 gap-3">
-          {TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              aria-pressed={t.id === templateId}
-              onClick={() => edit(setTemplate(t.id))}
-              className={`overflow-hidden rounded-lg border-2 bg-white text-left ${t.id === templateId ? "border-brand" : "border-slate-200 hover:border-slate-400"}`}
-            >
-              <div className="pointer-events-none">
-                <TemplateThumb id={t.id} />
-              </div>
-              <div className="px-2 py-1.5 text-sm font-medium">{t.name}</div>
-            </button>
-          ))}
-        </div>
+        <TemplatePicker templateId={templateId} edit={edit} />
       </section>
 
       {showTheme && (

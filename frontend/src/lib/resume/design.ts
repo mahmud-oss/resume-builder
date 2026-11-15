@@ -102,6 +102,7 @@ export const DEFAULT_DESIGN: Design = {
   textColor: DEFAULT_TEXT_COLOR,
   spacing: "normal",
   styles: DEFAULT_STYLES,
+  contactIcons: false,
 };
 
 /** Mixes a hex colour towards another by `amount` (0 to 1). Used for secondary text. */
@@ -138,7 +139,8 @@ export function normaliseDesign(raw: unknown, base: Design = DEFAULT_DESIGN): De
   const accent = typeof r.accent === "string" && HEX.test(r.accent) ? r.accent : base.accent;
   const textColor = typeof r.textColor === "string" && HEX.test(r.textColor) ? r.textColor : base.textColor;
   const spacing = SPACINGS.some((s) => s.id === r.spacing) ? (r.spacing as SpacingId) : base.spacing;
-  return { font, fontSize, accent, textColor, spacing, styles: normaliseStyles(r.styles, base.styles) };
+  const contactIcons = typeof r.contactIcons === "boolean" ? r.contactIcons : base.contactIcons;
+  return { font, fontSize, accent, textColor, spacing, styles: normaliseStyles(r.styles, base.styles), contactIcons };
 }
 
 function normaliseStyles(raw: unknown, base: Design["styles"]): Design["styles"] {
