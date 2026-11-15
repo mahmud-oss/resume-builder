@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #111827;
+  --brand: #2563eb;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+/* Text that can be edited directly in the resume preview. */
+.rb-editable {
+  cursor: text;
+  border-radius: 2px;
+  outline: none;
+}
+.rb-editable:hover {
+  outline: 1px dashed rgba(37, 99, 235, 0.55);
+  outline-offset: 1px;
+}
+.rb-editable:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.7);
+  outline-offset: 1px;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+/* The page used to make the PDF. Exactly one A4 page per .rb-page, no browser margins. */
+@page {
+  size: A4;
+  margin: 0;
+}
