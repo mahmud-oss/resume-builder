@@ -1,28 +1,71 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { ResumeCanvas } from "@/components/resume/ResumeCanvas";
-import { ACCENT_PRESETS, FONT_SIZES, FONTS, SPACINGS } from "@/lib/resume/design";
+import { STYLE_TARGETS } from "@/lib/resume/design";
 import { sampleDoc } from "@/lib/resume/doc";
-import { setDesign, setTemplate } from "@/lib/resume/mutations";
+import { setTemplate } from "@/lib/resume/mutations";
 import { TEMPLATES } from "@/lib/resume/templates";
-import type { Design, FontId, SpacingId } from "@/lib/resume/types";
+import type { Design, StyleTarget, TextStyle } from "@/lib/resume/types";
 
 import type { Edit } from "./FieldEditors";
-import { inputClass } from "./ui";
+import { StyleControls } from "./StyleControls";
+import { ThemeCustomiser } from "./ThemeCustomiser";
+import { ThemePicker } from "./ThemePicker";
 
 function TemplateThumb({ id }: { id: string }) {
   const doc = useMemo(() => sampleDoc(id), [id]);
   return <ResumeCanvas doc={doc} mode="thumb" />;
 }
 
-export function DesignPanel({ templateId, design, edit }: { templateId: string; design: Design; edit: Edit }) {
+function StyleRow({ target, label, style, edit }: { target: StyleTarget; label: string; style: TextStyle; edit: Edit }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <li>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:border-slate-400"
+      >
+        <span>{label}</span>
+        <span className="text-xs text-slate-500">{open ? "Close" : "Edit style"}</span>
+      </button>
+      {open && (
+        <div className="mt-1">
+          <StyleControls target={target} style={style} edit={edit} />
+        </div>
+      )}
+    </li>
+  );
+}
+
+/** `showParts` lists every styleable part here (version A). Versions B and C style from the form or the preview instead. */
+export function DesignPanel({
+  templateId,
+  design,
+  edit,
+  showParts,
+  showCustomise,
+  showTheme,
+}: {
+  templateId: string;
+  design: Design;
+  edit: Edit;
+  showParts: boolean;
+  /** Colours, font and spacing. Version B shows these on the Content tab instead. */
+  showCustomise: boolean;
+  /** The theme list. Version B shows it on the Content tab instead. */
+  showTheme: boolean;
+}) {
   return (
     <div className="space-y-6">
       <section>
         <h2 className="mb-2 font-semibold">Template</h2>
-        <p className="mb-3 text-xs text-slate-500">Switching keeps everything you wrote and any fields you hid.</p>
+        <p className="mb-3 text-xs text-slate-500">
+          Switching keeps everything you wrote and any fields you hid. The look changes to the new template&apos;s first theme.
+        </p>
         <div className="grid grid-cols-2 gap-3">
           {TEMPLATES.map((t) => (
             <button
@@ -41,74 +84,31 @@ export function DesignPanel({ templateId, design, edit }: { templateId: string; 
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="font-semibold">Style</h2>
+      {showTheme && (
+        <section>
+          <h2 className="mb-2 font-semibold">Theme</h2>
+          <ThemePicker templateId={templateId} design={design} edit={edit} />
+          <p className="mt-2 text-xs text-slate-500">Pick a theme, then change any colour or style.</p>
+        </section>
+      )}
 
-        <label className="block text-sm">
-          <span className="mb-1 block text-xs font-medium text-slate-700">Font</span>
-          <select className={inputClass} value={design.font} onChange={(e) => edit(setDesign({ font: e.target.value as FontId }))}>
-            {FONTS.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      {showCustomise && <ThemeCustomiser design={design} edit={edit} />}
 
-        <label className="block text-sm">
-          <span className="mb-1 block text-xs font-medium text-slate-700">Text size</span>
-          <select className={inputClass} value={design.fontSize} onChange={(e) => edit(setDesign({ fontSize: Number(e.target.value) }))}>
-            {FONT_SIZES.map((s) => (
-              <option key={s} value={s}>
-                {s} pt
-              </option>
-            ))}
-          </select>
-        </label>
 
-        <fieldset>
-          <legend className="mb-1 text-xs font-medium text-slate-700">Spacing</legend>
-          <div className="flex gap-2">
-            {SPACINGS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                aria-pressed={design.spacing === s.id}
-                onClick={() => edit(setDesign({ spacing: s.id as SpacingId }))}
-                className={`flex-1 rounded-md border px-2 py-1.5 text-sm ${design.spacing === s.id ? "border-brand bg-brand/10 font-medium text-brand" : "border-slate-300 hover:bg-slate-50"}`}
-              >
-                {s.label}
-              </button>
+      {showParts && (
+        <section>
+          <h2 className="mb-1 font-semibold">Text styles</h2>
+          <p className="mb-3 text-xs text-slate-500">
+            Each style applies to every text of that kind, for example all job titles. Auto uses the theme&apos;s colour.
+          </p>
+          <ul className="space-y-2">
+            {STYLE_TARGETS.map((t) => (
+              <StyleRow key={t.id} target={t.id} label={t.label} style={design.styles[t.id]} edit={edit} />
             ))}
-          </div>
-        </fieldset>
+          </ul>
+        </section>
+      )}
 
-        <fieldset>
-          <legend className="mb-1 text-xs font-medium text-slate-700">Accent colour</legend>
-          <div className="flex flex-wrap items-center gap-2">
-            {ACCENT_PRESETS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                aria-label={`Accent colour ${c}`}
-                aria-pressed={design.accent.toLowerCase() === c}
-                onClick={() => edit(setDesign({ accent: c }))}
-                style={{ background: c }}
-                className={`h-7 w-7 rounded-full ring-offset-2 ${design.accent.toLowerCase() === c ? "ring-2 ring-slate-900" : ""}`}
-              />
-            ))}
-            <label className="ml-1 flex items-center gap-1 text-xs text-slate-600">
-              Custom
-              <input
-                type="color"
-                value={design.accent}
-                onChange={(e) => edit(setDesign({ accent: e.target.value }), "accent")}
-                className="h-7 w-9 cursor-pointer rounded border border-slate-300 bg-white p-0.5"
-              />
-            </label>
-          </div>
-        </fieldset>
-      </section>
     </div>
   );
 }

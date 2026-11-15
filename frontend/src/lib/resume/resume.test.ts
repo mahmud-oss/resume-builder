@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_DESIGN, normaliseDesign } from "./design";
+import { DEFAULT_DESIGN, normaliseDesign, sameDesign } from "./design";
+import { getTemplate, TEMPLATES } from "./templates";
 import { emptyData, isBlank, normaliseData } from "./defaults";
 import { historyReducer, initHistory } from "./history";
 import {
@@ -9,7 +10,9 @@ import {
   applyEdit,
   moveSection,
   removeItem,
+  applyDesign,
   setTemplate,
+  setTextStyle,
   toggleFieldHidden,
 } from "./mutations";
 import type { ResumeDoc } from "./types";
@@ -156,13 +159,59 @@ describe("loading data from the server", () => {
   });
 
   it("keeps design settings in their allowed ranges", () => {
-    const d = normaliseDesign({ font: "comic-sans", fontSize: 99, accent: "red; background:url(x)", spacing: "huge" });
-    expect(d).toEqual(DEFAULT_DESIGN);
-    expect(normaliseDesign({ font: "lato", fontSize: 11, accent: "#112233", spacing: "compact" })).toEqual({
-      font: "lato",
-      fontSize: 11,
-      accent: "#112233",
-      spacing: "compact",
+    const d = normaliseDesign({
+      font: "comic-sans",
+      fontSize: 99,
+      accent: "red; background:url(x)",
+      textColor: "javascript:alert(1)",
+      spacing: "huge",
+      styles: { bullets: { bold: "yes", color: "url(x)", font: "comic", scale: 7 }, heading: "nope" },
     });
+    expect(d).toEqual(DEFAULT_DESIGN);
+    const ok = normaliseDesign({ font: "lato", fontSize: 11, accent: "#112233", textColor: "#000000", spacing: "compact" });
+    expect(ok).toMatchObject({ font: "lato", fontSize: 11, accent: "#112233", textColor: "#000000", spacing: "compact" });
+  });
+
+  it("repairs saved text styles and fills in older resumes that have none", () => {
+    const d = normaliseDesign({ styles: { name: { italic: true, color: "#ff0000", font: "lato", scale: 1.3 }, bullets: { color: null } } });
+    expect(d.styles.name).toMatchObject({ bold: true, italic: true, color: "#ff0000", font: "lato", scale: 1.3 });
+    expect(d.styles.heading).toEqual(DEFAULT_DESIGN.styles.heading);
+    expect(normaliseDesign({ font: "lato" }).textColor).toBe(DEFAULT_DESIGN.textColor);
+  });
+});
+
+describe("themes and text styles", () => {
+  it("every template offers 2 or 3 distinct themes, and the first is its default", () => {
+    for (const t of TEMPLATES) {
+      expect(t.themes.length).toBeGreaterThanOrEqual(2);
+      expect(t.themes.length).toBeLessThanOrEqual(3);
+      expect(t.design).toBe(t.themes[0].design);
+      const looks = new Set(t.themes.map((x) => JSON.stringify(x.design)));
+      expect(looks.size).toBe(t.themes.length);
+    }
+  });
+
+  it("switching template applies that template's default theme but keeps the content", () => {
+    const edited = applyEdit({ kind: "basics", field: "fullName" }, "Tanvir")(newDoc());
+    const switched = setTemplate("creative")(edited);
+    expect(switched.design).toBe(getTemplate("creative").design);
+    expect(switched.data).toBe(edited.data);
+  });
+
+  it("changes one text style without touching the others", () => {
+    const doc = setTextStyle("heading", { italic: true, color: "#be123c" })(newDoc());
+    expect(doc.design.styles.heading).toMatchObject({ bold: true, italic: true, color: "#be123c" });
+    expect(doc.design.styles.bullets).toEqual(newDoc().design.styles.bullets);
+  });
+
+  it("applying a theme replaces the whole look", () => {
+    const theme = getTemplate("classic").themes[1];
+    expect(applyDesign(theme.design)(newDoc()).design).toBe(theme.design);
+  });
+
+  it("recognises when the design matches a theme", () => {
+    const theme = getTemplate("modern").themes[2];
+    expect(sameDesign(theme.design, JSON.parse(JSON.stringify(theme.design)))).toBe(true);
+    expect(sameDesign(setTextStyle("bullets", { bold: true })(setTemplate("modern")(newDoc())).design, theme.design)).toBe(false);
   });
 });

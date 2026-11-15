@@ -62,6 +62,7 @@ export function BasicsEditor({ basics, edit }: { basics: Basics; edit: Edit }) {
         customRef={(id, part) => ({ kind: "basicsCustom", id, part })}
         edit={edit}
         idPrefix="basics"
+        scope="basics"
       />
     </section>
   );

@@ -71,9 +71,11 @@ type Props = {
   onEdit?: (ref: EditRef, text: string) => void;
   /** Called with the number of pages whenever it changes. */
   onPageCount?: (count: number) => void;
+  /** Called with the key of the text being edited (or null when focus leaves it). */
+  onFocusKey?: (key: string | null) => void;
 };
 
-export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, onPageCount }: Props) {
+export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, onPageCount, onFocusKey }: Props) {
   const template = getTemplate(doc.templateId);
   const geo = useMemo(() => geometry(template), [template]);
   const canEdit = editable && !!onEdit && mode === "preview";
@@ -159,12 +161,19 @@ export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, 
     fontFamily: fontFamily(doc.design.font),
     fontSize: `${(doc.design.fontSize * 96) / 72}px`,
     lineHeight: 1.4,
-    color: "#1f2937",
+    color: doc.design.textColor,
   };
 
+  const setFocus = useCallback(
+    (key: string | null) => {
+      setFocusedKey(key);
+      onFocusKey?.(key);
+    },
+    [onFocusKey],
+  );
   const editApi = useMemo<EditApi | null>(
-    () => (canEdit ? { onEdit: onEdit!, focusedKey, setFocusedKey } : null),
-    [canEdit, onEdit, focusedKey],
+    () => (canEdit ? { onEdit: onEdit!, focusedKey, setFocusedKey: setFocus } : null),
+    [canEdit, onEdit, focusedKey, setFocus],
   );
 
   const wrap = (b: Block) => (

@@ -57,12 +57,44 @@ export type ResumeData = {
 export type FontId = "inter" | "lato" | "open-sans" | "merriweather" | "source-serif";
 export type SpacingId = "compact" | "normal" | "relaxed";
 
+/** The parts of a CV that can be styled as a group. */
+export type StyleTarget =
+  | "name"
+  | "headline"
+  | "contact"
+  | "heading"
+  | "itemTitle"
+  | "subtitle"
+  | "location"
+  | "dates"
+  | "bullets"
+  | "summary"
+  | "skillLabel"
+  | "skillValue";
+
+export type TextStyle = {
+  /** Font for this part, or null to use the design's main font. */
+  font: FontId | null;
+  /** Size relative to this part's normal size. */
+  scale: number;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  uppercase: boolean;
+  /** Hex colour, or null to use the template's default for this part. */
+  color: string | null;
+};
+
 export type Design = {
   font: FontId;
   /** Body text size in points. */
   fontSize: number;
+  /** Section headings, rules and the sidebar/banner colour. */
   accent: string;
+  /** Main text colour. */
+  textColor: string;
   spacing: SpacingId;
+  styles: Record<StyleTarget, TextStyle>;
 };
 
 /** Everything the editor works on and autosaves. */

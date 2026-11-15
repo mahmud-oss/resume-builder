@@ -2,7 +2,8 @@ import { produce } from "immer";
 import { arrayMove } from "@dnd-kit/sortable";
 
 import { newId, newItem, newSection } from "./defaults";
-import type { Design, EditRef, FieldSet, ResumeDoc, Section, SectionType } from "./types";
+import { getTemplate } from "./templates";
+import type { Design, EditRef, FieldSet, ResumeDoc, Section, SectionType, StyleTarget, TextStyle } from "./types";
 
 /**
  * Every edit is a pure function from one document to the next. That is what makes undo/redo,
@@ -31,10 +32,32 @@ export const setTitle =
       d.title = title;
     });
 
+/** Switches template. Content and hidden fields are untouched; the look becomes the new template's default theme. */
 export const setTemplate =
   (templateId: string): Mutation =>
   (doc) =>
-    doc.templateId === templateId ? doc : produce(doc, (d) => void (d.templateId = templateId));
+    doc.templateId === templateId ? doc : { ...doc, templateId, design: getTemplate(templateId).design };
+
+/** Replaces the whole look, for example with one of a template's themes. */
+export const applyDesign =
+  (design: Design): Mutation =>
+  (doc) =>
+    doc.design === design ? doc : { ...doc, design };
+
+/** Puts one part back to how the current template's default theme styles it. */
+export const resetTextStyle =
+  (target: StyleTarget): Mutation =>
+  (doc) =>
+    produce(doc, (d) => {
+      d.design.styles[target] = { ...getTemplate(d.templateId).design.styles[target] };
+    });
+
+export const setTextStyle =
+  (target: StyleTarget, patch: Partial<TextStyle>): Mutation =>
+  (doc) =>
+    produce(doc, (d) => {
+      Object.assign(d.design.styles[target], patch);
+    });
 
 export const setDesign =
   (patch: Partial<Design>): Mutation =>

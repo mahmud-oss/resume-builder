@@ -31,6 +31,8 @@ import { editKey } from "@/components/resume/Editable";
 import { FieldSetEditor, type Edit } from "./FieldEditors";
 import { ChevronIcon, EyeIcon, EyeOffIcon, PageBreakIcon, TrashIcon } from "./Icons";
 import { SortableCard } from "./SortableCard";
+import { StyleControls } from "./StyleControls";
+import { useStyleUi } from "./StyleUi";
 import { IconButton, inputClass } from "./ui";
 
 function useDragSensors() {
@@ -73,6 +75,7 @@ function ItemCard({ section, item, edit, canRemove }: { section: Section; item: 
               customRef={(id, part) => ({ kind: "itemCustom", sectionId: section.id, itemId: item.id, id, part })}
               edit={edit}
               idPrefix={`item-${item.id}`}
+              scope={section.type}
             />
           </div>
         </>
@@ -83,6 +86,8 @@ function ItemCard({ section, item, edit, canRemove }: { section: Section; item: 
 
 function SectionCard({ section, edit }: { section: Section; edit: Edit }) {
   const [open, setOpen] = useState(true);
+  const [styling, setStyling] = useState(false);
+  const styleUi = useStyleUi();
   const sensors = useDragSensors();
   const schema = SECTION_SCHEMAS[section.type];
   const titleRef = { kind: "sectionTitle", sectionId: section.id } as const;
@@ -106,6 +111,18 @@ function SectionCard({ section, edit }: { section: Section; edit: Edit }) {
               value={section.title}
               onChange={(e) => edit(applyEdit(titleRef, e.target.value), editKey(titleRef))}
             />
+            {styleUi.enabled && (
+              <button
+                type="button"
+                aria-label="Style section headings"
+                title="Font and style"
+                aria-expanded={styling}
+                onClick={() => setStyling(!styling)}
+                className={`h-8 rounded px-1.5 text-xs font-semibold hover:bg-slate-100 ${styling ? "bg-slate-100 text-brand" : "text-slate-600"}`}
+              >
+                Aa
+              </button>
+            )}
             <IconButton
               label={section.pageBreakBefore ? "Remove page break before this section" : "Start this section on a new page"}
               active={!!section.pageBreakBefore}
@@ -123,6 +140,11 @@ function SectionCard({ section, edit }: { section: Section; edit: Edit }) {
               <TrashIcon />
             </IconButton>
           </div>
+          {styleUi.enabled && styling && (
+            <div className="px-3 pb-3">
+              <StyleControls target="heading" style={styleUi.styles.heading} edit={edit} />
+            </div>
+          )}
           {open && (
             <div className="space-y-3 border-t border-slate-100 p-3">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>

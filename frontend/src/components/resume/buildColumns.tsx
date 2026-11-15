@@ -1,9 +1,9 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 
-import { spacingFactor } from "@/lib/resume/design";
+import { fontFamily, mix, spacingFactor } from "@/lib/resume/design";
 import { SECTION_SCHEMAS, type SectionSchema } from "@/lib/resume/schemas";
 import type { TemplateConfig } from "@/lib/resume/templates";
-import type { EditRef, FieldSet, Item, ResumeDoc, Section } from "@/lib/resume/types";
+import type { EditRef, FieldSet, Item, ResumeDoc, Section, StyleTarget } from "@/lib/resume/types";
 
 import { Lines, Txt, editKey } from "./Editable";
 
@@ -24,13 +24,14 @@ export type Block = {
 
 export type Columns = { main: Block[]; side: Block[] };
 
-const INK = "#1f2937";
-const MUTED = "#4b5563";
 
 type Ctx = {
   doc: ResumeDoc;
   template: TemplateConfig;
   accent: string;
+  /** Main text colour, and a softer version of it for secondary text. */
+  ink: string;
+  muted: string;
   /** Base spacing unit in pixels. */
   u: number;
   focusedKey: string | null;
@@ -50,6 +51,28 @@ export function onAccent(hex: string): string {
   return luminance > 0.5 ? "#111827" : "#ffffff";
 }
 
+/**
+ * The look the user chose for one part of the CV (bold, italic, underline, capitals, colour).
+ * In the sidebar the colour is left alone because it sits on the accent background.
+ */
+function textStyle(c: Ctx, target: StyleTarget, fallbackColor?: string, em = 1): CSSProperties {
+  const s = c.doc.design.styles[target];
+  const css: CSSProperties = {
+    fontWeight: s.bold ? 700 : 400,
+    fontStyle: s.italic ? "italic" : "normal",
+    textDecoration: s.underline ? "underline" : "none",
+    textTransform: s.uppercase ? "uppercase" : "none",
+  };
+  if (s.font) css.fontFamily = fontFamily(s.font);
+  const size = em * s.scale;
+  if (size !== 1) css.fontSize = `${size}em`;
+  if (c.variant === "main") {
+    const color = s.color ?? fallbackColor;
+    if (color) css.color = color;
+  }
+  return css;
+}
+
 function present(c: Ctx, ref: EditRef, value: string): boolean {
   return value.trim() !== "" || c.focusedKey === editKey(ref);
 }
@@ -67,7 +90,14 @@ function join(parts: ReactNode[], separator: ReactNode): ReactNode {
 
 const CONTACT_KEYS = ["email", "phone", "location", "website", "linkedin"];
 
-function customFieldNode(c: Ctx, fs: FieldSet, kind: "basics" | "item", scope: { sectionId?: string; itemId?: string }) {
+function customFieldNode(
+  c: Ctx,
+  fs: FieldSet,
+  kind: "basics" | "item",
+  scope: { sectionId?: string; itemId?: string },
+  target: StyleTarget,
+) {
+  const style = textStyle(c, target);
   const nodes: ReactNode[] = [];
   for (const f of fs.custom) {
     if (f.hidden) continue;
@@ -82,11 +112,11 @@ function customFieldNode(c: Ctx, fs: FieldSet, kind: "basics" | "item", scope: {
       <span key={f.id}>
         {showLabel && (
           <>
-            <Txt edit={labelRef} value={f.label} />
+            <Txt edit={labelRef} value={f.label} style={style} />
             {": "}
           </>
         )}
-        <Txt edit={valueRef} value={f.value} />
+        <Txt edit={valueRef} value={f.value} style={style} />
       </span>,
     );
   }
@@ -100,9 +130,9 @@ function contactParts(c: Ctx): ReactNode[] {
     if (b.hiddenFields[key]) continue;
     const ref: EditRef = { kind: "basics", field: key };
     const value = b.values[key] ?? "";
-    if (present(c, ref, value)) parts.push(<Txt key={key} edit={ref} value={value} />);
+    if (present(c, ref, value)) parts.push(<Txt key={key} edit={ref} value={value} style={textStyle(c, "contact")} />);
   }
-  return [...parts, ...customFieldNode(c, b, "basics", {})];
+  return [...parts, ...customFieldNode(c, b, "basics", {}, "contact")];
 }
 
 function photoNode(c: Ctx, size: number, round: boolean): ReactNode {
@@ -129,12 +159,12 @@ function nameAndHeadline(c: Ctx, nameColor?: string, headlineColor?: string): Re
   return (
     <>
       {!b.hiddenFields.fullName && present(c, nameRef, name) && (
-        <div style={{ fontSize: "2.1em", fontWeight: 700, lineHeight: 1.15, color: nameColor ?? INK }}>
+        <div style={{ lineHeight: 1.15, ...textStyle(c, "name", nameColor ?? c.ink, 2.1) }}>
           <Txt edit={nameRef} value={name} />
         </div>
       )}
       {!b.hiddenFields.headline && present(c, headRef, headline) && (
-        <div style={{ fontSize: "1.15em", marginTop: c.u * 0.3, color: headlineColor ?? c.accent }}>
+        <div style={{ marginTop: c.u * 0.3, ...textStyle(c, "headline", headlineColor ?? c.accent, 1.15) }}>
           <Txt edit={headRef} value={headline} />
         </div>
       )}
@@ -192,7 +222,7 @@ function headerBlock(c: Ctx): Block | null {
           {c.doc.data.basics.photo && <div style={{ display: "flex", justifyContent: "center", marginBottom: c.u }}>{photoNode(c, 88, true)}</div>}
           {nameAndHeadline(c)}
           {contact.length > 0 && (
-            <div style={{ marginTop: c.u * 0.8, fontSize: "0.95em", color: MUTED }}>{join(contact, sep)}</div>
+            <div style={{ marginTop: c.u * 0.8, fontSize: "0.95em", color: c.muted }}>{join(contact, sep)}</div>
           )}
         </div>
       ),
@@ -206,7 +236,7 @@ function headerBlock(c: Ctx): Block | null {
         <div>
           {nameAndHeadline(c)}
           {contact.length > 0 && (
-            <div style={{ marginTop: c.u * 0.8, fontSize: "0.95em", color: MUTED }}>{join(contact, sep)}</div>
+            <div style={{ marginTop: c.u * 0.8, fontSize: "0.95em", color: c.muted }}>{join(contact, sep)}</div>
           )}
         </div>
         {photoNode(c, 84, false)}
@@ -268,19 +298,21 @@ function SectionHeading({ c, section }: { c: Ctx; section: Section }) {
       marginBottom: bottom,
     };
   } else {
-    const base: CSSProperties = { fontWeight: 700, color: c.accent, marginBottom: bottom };
+    const em = c.template.heading === "rule" ? 0.95 : c.template.heading === "caps" ? 0.9 : 1.05;
+    const base: CSSProperties = { ...textStyle(c, "heading", c.accent, em), marginBottom: bottom };
+    const caps = c.doc.design.styles.heading.uppercase;
     switch (c.template.heading) {
       case "rule":
-        style = { ...base, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "0.95em", borderBottom: `1.5px solid ${c.accent}`, paddingBottom: 3 };
+        style = { ...base, letterSpacing: caps ? "0.08em" : undefined, borderBottom: `1.5px solid ${c.accent}`, paddingBottom: 3 };
         break;
       case "caps":
-        style = { ...base, textTransform: "uppercase", letterSpacing: "0.14em", fontSize: "0.9em" };
+        style = { ...base, letterSpacing: caps ? "0.14em" : undefined };
         break;
       case "bar":
-        style = { ...base, fontSize: "1.05em", borderLeft: `4px solid ${c.accent}`, paddingLeft: 8 };
+        style = { ...base, letterSpacing: caps ? "0.06em" : undefined, borderLeft: `4px solid ${c.accent}`, paddingLeft: 8 };
         break;
       default:
-        style = { ...base, fontSize: "1.05em", marginBottom: c.u * 0.6 };
+        style = { ...base, letterSpacing: caps ? "0.06em" : undefined, marginBottom: c.u * 0.6 };
     }
   }
 
@@ -308,18 +340,18 @@ function EntryItem({ c, section, schema, item }: { c: Ctx; section: Section; sch
   const extras = schema.fields.map((f) => f.key).filter((k) => !used.has(k) && shown(k));
   const dates = [schema.dateStart, schema.dateEnd].filter(shown) as string[];
   const bodyField = schema.fields.find((f) => f.key === schema.body);
-  const custom = customFieldNode(c, item, "item", { sectionId: section.id, itemId: item.id });
-  const small: CSSProperties = { color: MUTED, fontSize: "0.95em" };
+  const custom = customFieldNode(c, item, "item", { sectionId: section.id, itemId: item.id }, "subtitle");
+  const small: CSSProperties = { color: c.muted, fontSize: "0.95em" };
 
   return (
     <div>
       {(shown(schema.title) || dates.length > 0) && (
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-          <div style={{ fontWeight: 700 }}>{shown(schema.title) && <Txt edit={ref(schema.title!)} value={value(schema.title)} />}</div>
+          <div style={textStyle(c, "itemTitle", c.ink)}>{shown(schema.title) && <Txt edit={ref(schema.title!)} value={value(schema.title)} />}</div>
           {dates.length > 0 && (
             <div style={{ ...small, whiteSpace: "nowrap" }}>
               {join(
-                dates.map((d) => <Txt key={d} edit={ref(d)} value={value(d)} />),
+                dates.map((d) => <Txt key={d} edit={ref(d)} value={value(d)} style={textStyle(c, "dates")} />),
                 " – ",
               )}
             </div>
@@ -327,9 +359,11 @@ function EntryItem({ c, section, schema, item }: { c: Ctx; section: Section; sch
         </div>
       )}
       {subtitle.length > 0 && (
-        <div style={{ ...small, fontStyle: "italic" }}>
+        <div style={small}>
           {join(
-            subtitle.map((s) => <Txt key={s} edit={ref(s)} value={value(s)} />),
+            subtitle.map((s) => (
+              <Txt key={s} edit={ref(s)} value={value(s)} style={textStyle(c, s === "location" ? "location" : "subtitle", c.muted)} />
+            )),
             " · ",
           )}
         </div>
@@ -337,16 +371,21 @@ function EntryItem({ c, section, schema, item }: { c: Ctx; section: Section; sch
       {extras.length > 0 && (
         <div style={small}>
           {join(
-            extras.map((e) => <Txt key={e} edit={ref(e)} value={value(e)} />),
+            extras.map((e) => <Txt key={e} edit={ref(e)} value={value(e)} style={textStyle(c, "subtitle", c.muted)} />),
             " · ",
           )}
         </div>
       )}
       {shown(schema.body) &&
         (bodyField?.kind === "bullets" ? (
-          <Lines edit={ref(schema.body!)} value={value(schema.body)} focusedKey={c.focusedKey} style={{ marginTop: c.u * 0.4 }} />
+          <Lines
+            edit={ref(schema.body!)}
+            value={value(schema.body)}
+            focusedKey={c.focusedKey}
+            style={{ marginTop: c.u * 0.4, ...textStyle(c, "bullets") }}
+          />
         ) : (
-          <div style={{ marginTop: c.u * 0.4 }}>
+          <div style={{ marginTop: c.u * 0.4, ...textStyle(c, "bullets") }}>
             <Txt edit={ref(schema.body!)} value={value(schema.body)} multiline />
           </div>
         ))}
@@ -369,8 +408,8 @@ function RowItem({ c, section, schema, item }: { c: Ctx; section: Section; schem
   const showValue = !item.hiddenFields[valueKey] && present(c, ref(valueKey), item.values[valueKey] ?? "");
   if (!showLabel && !showValue) return null;
 
-  const label = showLabel && <Txt edit={ref(labelKey)} value={item.values[labelKey] ?? ""} style={{ fontWeight: 700 }} />;
-  const value = showValue && <Txt edit={ref(valueKey)} value={item.values[valueKey] ?? ""} />;
+  const label = showLabel && <Txt edit={ref(labelKey)} value={item.values[labelKey] ?? ""} style={textStyle(c, "skillLabel")} />;
+  const value = showValue && <Txt edit={ref(valueKey)} value={item.values[valueKey] ?? ""} style={textStyle(c, "skillValue")} />;
 
   if (c.variant === "side") {
     return (
@@ -417,7 +456,7 @@ function sectionBlocks(c: Ctx, section: Section): Block[] {
 
   const body =
     schema.layout === "text" ? (
-      <div>
+      <div style={textStyle(c, "summary")}>
         <Txt
           edit={{ kind: "item", sectionId: section.id, itemId: items[0].id, field: schema.body! }}
           value={items[0].values[schema.body!] ?? ""}
@@ -447,9 +486,11 @@ function sectionBlocks(c: Ctx, section: Section): Block[] {
 export function buildColumns(doc: ResumeDoc, template: TemplateConfig, focusedKey: string | null): Columns {
   const accent = doc.design.accent;
   const u = 8 * spacingFactor(doc.design.spacing);
-  const base = { doc, template, accent, u, focusedKey };
-  const mainCtx: Ctx = { ...base, variant: "main", fg: INK };
-  const sideCtx: Ctx = { ...base, variant: "side", fg: onAccent(accent) };
+  const ink = doc.design.textColor;
+  const base = { doc, template, accent, ink, muted: mix(ink, "#ffffff", 0.3), u, focusedKey };
+  const mainCtx: Ctx = { ...base, variant: "main", fg: ink };
+  const sideFg = onAccent(accent);
+  const sideCtx: Ctx = { ...base, variant: "side", fg: sideFg, ink: sideFg, muted: sideFg };
 
   const main: Block[] = [];
   const side: Block[] = [];
