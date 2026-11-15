@@ -126,3 +126,34 @@ body {
   line-height: 1;
   color: #111827;
 }
+
+/* Entry tools: a vertical strip in the page margin, right of the entry. Shown on hover or focus. */
+.rb-actmargin {
+  position: absolute;
+  z-index: 5;
+  /* Centred on the entry, so it sits in the middle whether the entry is short or tall. */
+  top: 50%;
+  transform: translateY(-50%);
+  left: 100%;
+  padding-left: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.rb-bar--col {
+  flex-direction: column;
+}
+.rb-hov:hover > .rb-actmargin,
+.rb-hov:focus-within > .rb-actmargin,
+.rb-actmargin:has([data-open="true"]) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* The strip on the left of an entry instead of the right (main column). */
+.rb-actmargin--left {
+  left: auto;
+  right: 100%;
+  padding-left: 0;
+  padding-right: 6px;
+}

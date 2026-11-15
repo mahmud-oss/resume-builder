@@ -537,7 +537,7 @@ function sectionBlocks(c: Ctx, section: Section, nav: Neighbours): Block[] {
           ) : (
             <div className="rb-hov">
               <EntryItem c={c} section={section} schema={schema} item={item} />
-              <ItemActions section={section} item={item} variant="entry" {...around(index)} />
+              <ItemActions section={section} item={item} side={c.variant === "side"} {...around(index)} />
             </div>
           )}
           {index === items.length - 1 && c.ghost && !schema.singleItem && (
@@ -565,7 +565,7 @@ function sectionBlocks(c: Ctx, section: Section, nav: Neighbours): Block[] {
         ) : (
           <div key={item.id} className="rb-hov">
             <RowItem c={c} section={section} schema={schema} item={item} />
-            <ItemActions section={section} item={item} variant="row" {...around(index)} />
+            <ItemActions section={section} item={item} side={c.variant === "side"} {...around(index)} />
           </div>
         )
       )

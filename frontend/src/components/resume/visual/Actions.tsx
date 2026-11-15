@@ -376,58 +376,66 @@ export function ItemActions({
   item,
   prevId,
   nextId,
-  variant,
+  side = false,
 }: {
   section: Section;
   item: Item;
   prevId?: string;
   nextId?: string;
-  variant: "entry" | "row";
+  /**
+   * Entries in a coloured sidebar keep the strip on their right: the sidebar's left edge is the edge of the
+   * page, with too little room for it. Everything else has it in the left margin.
+   */
+  side?: boolean;
 }) {
   const v = useVisual();
   if (!v) return null;
   const { edit } = v;
   const schema = SECTION_SCHEMAS[section.type];
   if (schema.singleItem) return null;
-  // Entry tools sit inside their own entry (never over the one above), so it is clear whose they are.
-  const style =
-    variant === "row"
-      ? { top: "50%", right: 0, transform: "translateY(-50%)" }
-      : { top: 2, right: 2 };
+  // The tools stand in the page margin beside the entry, as a small vertical strip. They never
+  // cover anything that can be typed (dates sit at the top-right of an entry), and the strip starts
+  // flush against the entry so the pointer can travel from the text to the buttons without losing hover.
   return (
-    <Bar style={style}>
-      <Act
-        label="Move entry up"
-        disabled={!prevId}
-        onClick={() => edit(moveItem(section.id, item.id, prevId!))}
+    <div className={side ? "rb-actmargin" : "rb-actmargin rb-actmargin--left"}>
+      <div
+        className="rb-bar rb-bar--col"
+        role="toolbar"
+        aria-label="Entry tools"
       >
-        <ArrowUpIcon />
-      </Act>
-      <Act
-        label="Move entry down"
-        disabled={!nextId}
-        onClick={() => edit(moveItem(section.id, item.id, nextId!))}
-      >
-        <ArrowDownIcon />
-      </Act>
-      <FieldsMenu
-        target={{ kind: "item", sectionId: section.id, itemId: item.id }}
-        fs={item}
-        fields={schema.fields}
-      />
-      <Act
-        label="Hide entry"
-        onClick={() => edit(toggleItemHidden(section.id, item.id))}
-      >
-        <EyeIcon />
-      </Act>
-      <Act
-        label="Delete entry"
-        onClick={() => edit(removeItem(section.id, item.id))}
-      >
-        <TrashIcon />
-      </Act>
-    </Bar>
+        <Act
+          label="Move entry up"
+          disabled={!prevId}
+          onClick={() => edit(moveItem(section.id, item.id, prevId!))}
+        >
+          <ArrowUpIcon />
+        </Act>
+        <Act
+          label="Move entry down"
+          disabled={!nextId}
+          onClick={() => edit(moveItem(section.id, item.id, nextId!))}
+        >
+          <ArrowDownIcon />
+        </Act>
+        <FieldsMenu
+          target={{ kind: "item", sectionId: section.id, itemId: item.id }}
+          fs={item}
+          fields={schema.fields}
+        />
+        <Act
+          label="Hide entry"
+          onClick={() => edit(toggleItemHidden(section.id, item.id))}
+        >
+          <EyeIcon />
+        </Act>
+        <Act
+          label="Delete entry"
+          onClick={() => edit(removeItem(section.id, item.id))}
+        >
+          <TrashIcon />
+        </Act>
+      </div>
+    </div>
   );
 }
 
