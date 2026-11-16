@@ -5,6 +5,8 @@ const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8080";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // Playwright drives a real browser and must stay a plain Node dependency, not be bundled.
+  serverExternalPackages: ["playwright", "playwright-core"],
   partialPrefetching: true,
   turbopack: {
     rules: {

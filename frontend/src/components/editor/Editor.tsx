@@ -39,6 +39,7 @@ import { ThemePicker } from "./ThemePicker";
 import { PreviewPanel } from "./PreviewPanel";
 import { VisualTopBar } from "./VisualTopBar";
 import { useMediaQuery } from "@/lib/useMediaQuery";
+import { downloadPdf } from "@/lib/exportPdf";
 import { IconButton, inputClass } from "./ui";
 import { useAutosave, type SaveStatus } from "./useAutosave";
 
@@ -129,6 +130,29 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
   // Side by side only when each page has room; otherwise the preview covers the editor.
   const wide = useMediaQuery("(min-width: 1500px)");
   const [photoError, setPhotoError] = useState<string | null>(null);
+
+  // PDF export: the server prints exactly what the template draws, from the CV as it is on screen now.
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  async function exportPdf() {
+    setExportError(null);
+    if (isBlank(doc.data)) {
+      setExportError(
+        "Your CV is empty. Add some content before downloading it.",
+      );
+      return;
+    }
+    setExporting(true);
+    try {
+      await downloadPdf(doc);
+    } catch (e) {
+      setExportError(
+        e instanceof Error ? e.message : "Could not make the PDF.",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
   const photoInput = useRef<HTMLInputElement>(null);
   const pickPhoto = useCallback(() => photoInput.current?.click(), []);
   const visual = useMemo<VisualApi>(
@@ -231,6 +255,14 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
           >
             <RedoIcon />
           </IconButton>
+          <button
+            type="button"
+            onClick={exportPdf}
+            disabled={exporting}
+            className="ml-2 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+          >
+            {exporting ? "Preparing PDF…" : "Download PDF"}
+          </button>
         </div>
         <div
           className={`${visualMode ? "hidden" : "flex"} w-full gap-1 lg:hidden`}
@@ -261,6 +293,21 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
           preview={previewOpen}
           onPreview={setPreviewOpen}
         />
+      )}
+      {exportError && (
+        <p
+          role="alert"
+          className="flex items-center justify-between bg-red-50 px-3 py-1.5 text-sm text-red-700"
+        >
+          <span>{exportError}</span>
+          <button
+            type="button"
+            onClick={() => setExportError(null)}
+            className="ml-3 underline"
+          >
+            Dismiss
+          </button>
+        </p>
       )}
       {photoError && (
         <p role="alert" className="bg-red-50 px-3 py-1.5 text-sm text-red-700">
@@ -380,9 +427,17 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
             />
           </div>
         </main>
-        {visualMode && previewOpen && wide && <PreviewPanel doc={doc} overlay={false} onClose={() => setPreviewOpen(false)} />}
+        {visualMode && previewOpen && wide && (
+          <PreviewPanel
+            doc={doc}
+            overlay={false}
+            onClose={() => setPreviewOpen(false)}
+          />
+        )}
       </div>
-      {visualMode && previewOpen && !wide && <PreviewPanel doc={doc} overlay onClose={() => setPreviewOpen(false)} />}
+      {visualMode && previewOpen && !wide && (
+        <PreviewPanel doc={doc} overlay onClose={() => setPreviewOpen(false)} />
+      )}
       {version === "c" && barOpen && activeTarget && (
         <FloatingStyleBar
           target={activeTarget}
