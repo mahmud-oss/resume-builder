@@ -36,10 +36,12 @@ import { FloatingStyleBar } from "./FloatingStyleBar";
 import { StyleUiContext } from "./StyleUi";
 import { ThemeCustomiser } from "./ThemeCustomiser";
 import { ThemePicker } from "./ThemePicker";
+import { FieldSheet } from "./FieldSheet";
 import { PreviewPanel } from "./PreviewPanel";
 import { VisualTopBar } from "./VisualTopBar";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { downloadPdf } from "@/lib/exportPdf";
+import { fieldKeyOf, orderForForm } from "@/lib/resume/fieldAccess";
 import { IconButton, inputClass } from "./ui";
 import { useAutosave, type SaveStatus } from "./useAutosave";
 
@@ -129,6 +131,64 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   // Side by side only when each page has room; otherwise the preview covers the editor.
   const wide = useMediaQuery("(min-width: 1500px)");
+
+  // Phones, small windows and touch screens: text is not edited in place. Tapping it opens a sheet at the
+  // bottom with a real-sized input, and the page above is a zoomable overview.
+  const compact = useMediaQuery("(max-width: 767px), (hover: none)");
+  const touchEditing = visualMode && compact;
+  const [sheetKey, setSheetKey] = useState<string | null>(null);
+  const [sheetHeight, setSheetHeight] = useState(0);
+  const [zoom, setZoom] = useState<"fit" | 0.75 | 1>("fit");
+  const openField = useCallback(
+    (key: string) => setSheetKey(fieldKeyOf(key)),
+    [],
+  );
+  const closeSheet = useCallback(() => setSheetKey(null), []);
+  const onSheetHeight = useCallback((px: number) => setSheetHeight(px), []);
+  // Leaving touch editing (a bigger window, or another version) closes the sheet for good.
+  if (!touchEditing && sheetKey !== null) setSheetKey(null);
+
+  /** Moves the sheet to the field before or after the current one, in the order they appear on the page. */
+  const navigateField = useCallback(
+    (direction: -1 | 1) => {
+      const root = previewRef.current;
+      if (!root || !sheetKey) return;
+      const seen: string[] = [];
+      root.querySelectorAll<HTMLElement>("[data-focus-key]").forEach((el) => {
+        const k = fieldKeyOf(el.dataset.focusKey ?? "");
+        if (k && !seen.includes(k)) seen.push(k);
+      });
+      const keys = orderForForm(seen, doc);
+      const at = keys.indexOf(sheetKey);
+      const next = keys[at + direction];
+      if (next) setSheetKey(next);
+    },
+    [sheetKey, doc],
+  );
+
+  // Keep the field being edited visible above the sheet.
+  useEffect(() => {
+    if (!sheetKey || !touchEditing) return;
+    const root = previewRef.current;
+    if (!root) return;
+    const id = window.requestAnimationFrame(() => {
+      const wanted = [
+        ...root.querySelectorAll<HTMLElement>("[data-focus-key]"),
+      ].find((el) => fieldKeyOf(el.dataset.focusKey ?? "") === sheetKey);
+      if (!wanted) return;
+      const box = wanted.getBoundingClientRect();
+      const rootBox = root.getBoundingClientRect();
+      const top = rootBox.top + 12;
+      const bottom = window.innerHeight - sheetHeight - 12;
+      if (box.top < top || box.bottom > bottom) {
+        root.scrollBy({
+          top: box.top - (top + Math.max(0, bottom - top) / 3),
+          behavior: "smooth",
+        });
+      }
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [sheetKey, sheetHeight, touchEditing]);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
   // PDF export: the server prints exactly what the template draws, from the CV as it is on screen now.
@@ -199,16 +259,18 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
 
   return (
     <div className="flex h-dvh flex-col bg-slate-100">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-200 bg-white px-3 py-2">
+      <header
+        className={`flex flex-wrap items-center border-b border-slate-200 bg-white px-3 ${compact ? "gap-x-2 gap-y-0.5 py-1" : "gap-x-3 gap-y-1 py-2"}`}
+      >
         <Link
           href="/dashboard"
           className="text-sm text-slate-600 hover:underline"
         >
-          ← My resumes
+          {compact ? <span aria-label="My resumes">←</span> : "← My resumes"}
         </Link>
         <input
           aria-label="Resume name"
-          className={`${inputClass} !w-56 min-w-0 font-medium`}
+          className={`${inputClass} min-w-0 font-medium ${compact ? "!w-auto flex-1" : "!w-56"}`}
           value={doc.title}
           maxLength={200}
           onChange={(e) => edit(setTitle(e.target.value), "title")}
@@ -226,7 +288,7 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
               aria-label="Editor version (for testing)"
               className="mr-2 flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-900"
             >
-              <span>Version</span>
+              {!compact && <span>Version</span>}
               {EDITOR_VERSIONS.map((v) => (
                 <button
                   key={v.id}
@@ -258,10 +320,11 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
           <button
             type="button"
             onClick={exportPdf}
+            aria-label={exporting ? "Preparing PDF" : "Download PDF"}
             disabled={exporting}
             className="ml-2 rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
           >
-            {exporting ? "Preparing PDF…" : "Download PDF"}
+            {exporting ? "Preparing PDF…" : compact ? "PDF" : "Download PDF"}
           </button>
         </div>
         <div
@@ -292,6 +355,9 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
           onGhost={setGhost}
           preview={previewOpen}
           onPreview={setPreviewOpen}
+          compact={compact}
+          zoom={zoom}
+          onZoom={setZoom}
         />
       )}
       {exportError && (
@@ -398,18 +464,29 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
 
         <main
           ref={previewRef}
-          className={`${view === "preview" || visualMode ? "block" : "hidden"} min-w-0 flex-1 select-none overflow-y-auto p-4 lg:block`}
+          style={sheetKey ? { paddingBottom: sheetHeight + 16 } : undefined}
+          className={`${view === "preview" || visualMode ? "block" : "hidden"} min-w-0 flex-1 select-none overflow-y-auto p-4 lg:block ${
+            touchEditing
+              ? `rb-compact ${zoom === "fit" ? "" : "overflow-x-auto"} !px-2 !pt-2`
+              : ""
+          }`}
         >
-          <div className="mx-auto max-w-[820px]">
+          <div
+            className={
+              zoom !== "fit" && touchEditing ? "" : "mx-auto max-w-[820px]"
+            }
+          >
             <div className="mb-3 flex items-center justify-between text-xs text-slate-600">
               <span>
-                {visualMode
-                  ? ghost
-                    ? "Click any text to edit or style it. Hover a block for its tools. Grey text is a placeholder and is not in your PDF."
-                    : "Click any text to edit or style it. Hover a block for its tools."
-                  : blank
-                    ? "Sample content. Start typing and yours replaces it."
-                    : "Click any text on the page to edit it."}
+                {touchEditing
+                  ? "Tap any text to edit it. Grey text is not in your PDF."
+                  : visualMode
+                    ? ghost
+                      ? "Click any text to edit or style it. Hover a block for its tools. Grey text is a placeholder and is not in your PDF."
+                      : "Click any text to edit or style it. Hover a block for its tools."
+                    : blank
+                      ? "Sample content. Start typing and yours replaces it."
+                      : "Click any text on the page to edit it."}
               </span>
               <span>
                 {pages} {pages === 1 ? "page" : "pages"}
@@ -424,6 +501,11 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
               onFocusKey={onFocusKey}
               visual={visualMode ? visual : null}
               ghost={visualMode && ghost}
+              touch={touchEditing}
+              selectedKey={sheetKey}
+              onOpenField={openField}
+              tools={!touchEditing}
+              zoom={touchEditing && zoom !== "fit" ? zoom : null}
             />
           </div>
         </main>
@@ -438,7 +520,18 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
       {visualMode && previewOpen && !wide && (
         <PreviewPanel doc={doc} overlay onClose={() => setPreviewOpen(false)} />
       )}
-      {version === "c" && barOpen && activeTarget && (
+      {touchEditing && sheetKey && (
+        <FieldSheet
+          doc={doc}
+          edit={edit}
+          fieldKey={sheetKey}
+          onClose={closeSheet}
+          onNavigate={navigateField}
+          onHeight={onSheetHeight}
+          pickPhoto={pickPhoto}
+        />
+      )}
+      {version === "c" && !compact && barOpen && activeTarget && (
         <FloatingStyleBar
           target={activeTarget}
           style={doc.design.styles[activeTarget]}

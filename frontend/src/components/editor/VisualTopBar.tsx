@@ -21,6 +21,9 @@ export function VisualTopBar({
   onGhost,
   preview,
   onPreview,
+  compact,
+  zoom,
+  onZoom,
 }: {
   templateId: string;
   design: Design;
@@ -29,25 +32,85 @@ export function VisualTopBar({
   onGhost: (on: boolean) => void;
   preview: boolean;
   onPreview: (on: boolean) => void;
+  /** Phone layout: one row you can swipe sideways, plus zoom. */
+  compact: boolean;
+  zoom: "fit" | 0.75 | 1;
+  onZoom: (zoom: "fit" | 0.75 | 1) => void;
 }) {
   return (
-    <div role="toolbar" aria-label="Whole CV" className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-3 py-2">
-      <PortalMenu label="Template" trigger="Template" triggerClassName={chip} width={400}>
+    <div
+      role="toolbar"
+      aria-label="Whole CV"
+      className={`flex items-center gap-2 border-b border-slate-200 bg-white px-3 ${compact ? "py-1" : "py-2"} ${compact ? "overflow-x-auto whitespace-nowrap [&>*]:shrink-0" : "flex-wrap"}`}
+    >
+      {compact && (
+        <div
+          role="group"
+          aria-label="Zoom"
+          className="flex overflow-hidden rounded-md border border-slate-300"
+        >
+          {(
+            [
+              ["fit", "Fit"],
+              [0.75, "75%"],
+              [1, "100%"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={zoom === value}
+              onClick={() => onZoom(value)}
+              className={`min-h-9 px-3 text-sm font-medium ${zoom === value ? "bg-brand text-white" : "bg-white text-slate-700"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <PortalMenu
+        label="Template"
+        trigger="Template"
+        triggerClassName={chip}
+        width={400}
+      >
         {() => <TemplatePicker templateId={templateId} edit={edit} />}
       </PortalMenu>
-      <PortalMenu label="Theme" trigger="Theme" triggerClassName={chip} width={320}>
-        {() => <ThemePicker templateId={templateId} design={design} edit={edit} />}
+      <PortalMenu
+        label="Theme"
+        trigger="Theme"
+        triggerClassName={chip}
+        width={320}
+      >
+        {() => (
+          <ThemePicker templateId={templateId} design={design} edit={edit} />
+        )}
       </PortalMenu>
-      <PortalMenu label="Colours and fonts" trigger="Colours & fonts" triggerClassName={chip} width={360}>
+      <PortalMenu
+        label="Colours and fonts"
+        trigger="Colours & fonts"
+        triggerClassName={chip}
+        width={360}
+      >
         {() => <ThemeCustomiser design={design} edit={edit} />}
       </PortalMenu>
       <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-        <input type="checkbox" checked={design.contactIcons} onChange={(e) => edit(setDesign({ contactIcons: e.target.checked }))} />
-        Contact icons
+        <input
+          type="checkbox"
+          checked={design.contactIcons}
+          onChange={(e) => edit(setDesign({ contactIcons: e.target.checked }))}
+        />
+        {compact ? "Icons" : "Contact icons"}
       </label>
-      <label className="ml-auto flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-        <input type="checkbox" checked={ghost} onChange={(e) => onGhost(e.target.checked)} />
-        Show placeholders
+      <label
+        className={`${compact ? "" : "ml-auto"} flex cursor-pointer items-center gap-2 text-sm text-slate-700`}
+      >
+        <input
+          type="checkbox"
+          checked={ghost}
+          onChange={(e) => onGhost(e.target.checked)}
+        />
+        {compact ? "Placeholders" : "Show placeholders"}
       </label>
       <button
         type="button"

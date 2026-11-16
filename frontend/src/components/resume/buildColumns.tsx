@@ -2,7 +2,7 @@ import { Fragment, type CSSProperties, type ReactNode } from "react";
 
 import { fontFamily, mix, spacingFactor } from "@/lib/resume/design";
 import { BASICS_FIELDS, SECTION_SCHEMAS, type SectionSchema } from "@/lib/resume/schemas";
-import { columnOf, columnToStore, sectionTypesFor, type TemplateConfig } from "@/lib/resume/templates";
+import { columnOf, columnToStore, sectionNeighbours, sectionTypesFor, type TemplateConfig } from "@/lib/resume/templates";
 import type { EditRef, FieldSet, Item, ResumeDoc, Section, StyleTarget } from "@/lib/resume/types";
 
 import { Lines, Txt, editKey } from "./Editable";
@@ -41,6 +41,8 @@ type Ctx = {
   focusedKey: string | null;
   /** Page-first editor: show greyed placeholders for empty things. */
   ghost: boolean;
+  /** Section tool rows above the headings. Off on phones. */
+  tools: boolean;
   variant: "main" | "side";
   /** Text colour on the sidebar background. */
   fg: string;
@@ -516,7 +518,9 @@ function sectionBlocks(c: Ctx, section: Section, nav: Neighbours): Block[] {
 
   const heading = (
     <div className="rb-hov" data-section-id={section.id}>
-      {c.ghost && <SectionActions section={section} prevId={nav.prevId} nextId={nav.nextId} canBreak={c.variant === "main"} />}
+      {c.ghost && c.tools && (
+        <SectionActions section={section} prevId={nav.prevId} nextId={nav.nextId} canBreak={c.variant === "main"} />
+      )}
       <SectionHeading c={c} section={section} />
     </div>
   );
@@ -595,11 +599,12 @@ export function buildColumns(
   template: TemplateConfig,
   focusedKey: string | null,
   ghost = false,
+  tools = true,
 ): Columns {
   const accent = doc.design.accent;
   const u = 8 * spacingFactor(doc.design.spacing);
   const ink = doc.design.textColor;
-  const base = { doc, template, accent, ink, muted: mix(ink, "#ffffff", 0.3), u, focusedKey, ghost };
+  const base = { doc, template, accent, ink, muted: mix(ink, "#ffffff", 0.3), u, focusedKey, ghost, tools };
   const mainCtx: Ctx = { ...base, variant: "main", fg: ink };
   const sideFg = onAccent(accent);
   const sideCtx: Ctx = { ...base, variant: "side", fg: sideFg, ink: sideFg, muted: sideFg };
@@ -614,10 +619,7 @@ export function buildColumns(
     if (name) main.push(name);
     for (const section of doc.data.sections) {
       const toSide = columnOf(template, section) === "side";
-      // Moving a section swaps it with its neighbour in the same column, so the move is always visible.
-      const column = doc.data.sections.filter((s) => (columnOf(template, s) === "side") === toSide);
-      const at = column.findIndex((s) => s.id === section.id);
-      const nav = { prevId: column[at - 1]?.id, nextId: column[at + 1]?.id };
+      const nav = sectionNeighbours(template, doc.data.sections, section.id);
       (toSide ? side : main).push(...sectionBlocks(toSide ? sideCtx : mainCtx, section, nav));
     }
   } else {

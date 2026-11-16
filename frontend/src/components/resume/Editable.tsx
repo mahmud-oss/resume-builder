@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import type { Edit } from "@/components/editor/FieldEditors";
+import { fieldKeyOf } from "@/lib/resume/fieldAccess";
 import { mergeLineUp, splitLineAt } from "@/lib/resume/lines";
 import type { EditRef } from "@/lib/resume/types";
 
@@ -37,6 +38,14 @@ export type EditApi = {
   requestFocus: (request: FocusRequest) => void;
   clearFocusRequest: () => void;
   visual: VisualApi | null;
+  /**
+   * Phone and touch: text is not edited in place. Tapping it opens the editing sheet instead, so the
+   * on-screen keyboard and tiny text never fight each other.
+   */
+  touch: boolean;
+  /** The field open in the sheet (its key without any bullet line), highlighted on the page. */
+  selectedKey: string | null;
+  openField: (key: string) => void;
 };
 
 export const EditContext = createContext<EditApi | null>(null);
@@ -92,6 +101,12 @@ function EditableSpan({ value, focusKey, onChange, multiline, placeholder, onSpl
     const request = api?.focusRequest;
     const el = ref.current;
     if (!api || !request || !el || request.key !== focusKey) return;
+    if (api.touch) {
+      // No cursor on a phone: open the sheet on the new field instead.
+      api.openField(request.key);
+      api.clearFocusRequest();
+      return;
+    }
     el.focus();
     const range = document.createRange();
     range.selectNodeContents(el);
@@ -103,6 +118,30 @@ function EditableSpan({ value, focusKey, onChange, multiline, placeholder, onSpl
   });
 
   const whiteSpace = multiline ? "pre-wrap" : undefined;
+
+  if (api?.touch) {
+    const selected = api.selectedKey !== null && fieldKeyOf(focusKey) === api.selectedKey;
+    return (
+      <span
+        ref={ref}
+        data-focus-key={focusKey}
+        data-placeholder={placeholder}
+        role="button"
+        tabIndex={0}
+        className={`rb-editable rb-tap ${selected ? "rb-sel" : ""} ${className ?? ""}`}
+        style={{ ...style, whiteSpace }}
+        onClick={() => api.openField(focusKey)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            api.openField(focusKey);
+          }
+        }}
+      >
+        {value}
+      </span>
+    );
+  }
 
   if (!api) {
     return (

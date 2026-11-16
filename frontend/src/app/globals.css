@@ -157,3 +157,34 @@ body {
   padding-left: 0;
   padding-right: 6px;
 }
+
+/* Phone and touch: text is tapped, not edited in place; the sheet at the bottom does the editing. */
+.rb-tap {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.rb-sel {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 2px;
+}
+/* The hover tools and outlines do not exist on touch screens (a tap would leave them stuck on). */
+@media (hover: none) {
+  .rb-hov:hover {
+    outline: none;
+  }
+  .rb-hov:hover > .rb-act,
+  .rb-hov:hover > .rb-actmargin {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+/* On a phone the sheet has all of those tools in a size that fits a finger. */
+.rb-compact .rb-actmargin,
+.rb-compact .rb-act {
+  display: none !important;
+}
+.rb-compact .rb-hov:hover {
+  outline: none;
+}

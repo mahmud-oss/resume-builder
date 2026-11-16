@@ -77,9 +77,17 @@ type Props = {
   visual?: VisualApi | null;
   /** Show greyed placeholders for empty things (edit view only; never exported). */
   ghost?: boolean;
+  /** Phone and touch: tapping text calls `onOpenField` instead of editing in place. */
+  touch?: boolean;
+  selectedKey?: string | null;
+  onOpenField?: (key: string) => void;
+  /** Section tool rows on the page. Off on phones, where the sheet has the same tools in a usable size. */
+  tools?: boolean;
+  /** A fixed zoom (1 = the page at its real width) instead of fitting the width. The parent scrolls sideways. */
+  zoom?: number | null;
 };
 
-export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, onPageCount, onFocusKey, visual = null, ghost = false }: Props) {
+export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, onPageCount, onFocusKey, visual = null, ghost = false, touch = false, selectedKey = null, onOpenField, tools = true, zoom = null }: Props) {
   const template = getTemplate(doc.templateId);
   const geo = useMemo(() => geometry(template), [template]);
   const canEdit = editable && !!onEdit && mode === "preview";
@@ -87,8 +95,8 @@ export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, 
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const showGhost = ghost && mode === "preview";
   const columns = useMemo(
-    () => buildColumns(doc, template, canEdit ? focusedKey : null, showGhost),
-    [doc, template, canEdit, focusedKey, showGhost],
+    () => buildColumns(doc, template, canEdit ? focusedKey : null, showGhost, tools),
+    [doc, template, canEdit, focusedKey, showGhost, tools],
   );
 
   // --- measuring -------------------------------------------------------------------------
@@ -154,12 +162,12 @@ export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, 
     if (mode === "print") return;
     const el = wrapRef.current;
     if (!el) return;
-    const update = () => setScale(Math.min(el.clientWidth / PAGE_W, mode === "thumb" ? 10 : 1.4));
+    const update = () => setScale(zoom ?? Math.min(el.clientWidth / PAGE_W, mode === "thumb" ? 10 : 1.4));
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [mode]);
+  }, [mode, zoom]);
 
   // --- drawing ---------------------------------------------------------------------------
   const rootStyle: CSSProperties = {
@@ -188,9 +196,20 @@ export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, 
   const editApi = useMemo<EditApi | null>(
     () =>
       canEdit
-        ? { onEdit: onEdit!, focusedKey, setFocusedKey: setFocus, focusRequest, requestFocus, clearFocusRequest, visual }
+        ? {
+            onEdit: onEdit!,
+            focusedKey,
+            setFocusedKey: setFocus,
+            focusRequest,
+            requestFocus,
+            clearFocusRequest,
+            visual,
+            touch,
+            selectedKey,
+            openField: onOpenField ?? (() => {}),
+          }
         : null,
-    [canEdit, onEdit, focusedKey, setFocus, focusRequest, requestFocus, clearFocusRequest, visual],
+    [canEdit, onEdit, focusedKey, setFocus, focusRequest, requestFocus, clearFocusRequest, visual, touch, selectedKey, onOpenField],
   );
 
   const wrap = (b: Block) => (
@@ -266,7 +285,7 @@ export function ResumeCanvas({ doc, mode = "preview", editable = false, onEdit, 
       data-ready={mode === "print" ? String(ready) : undefined}
       data-pages={totalPages}
       style={{
-        width: mode === "print" ? PAGE_W : "100%",
+        width: mode === "print" ? PAGE_W : zoom ? PAGE_W * zoom : "100%",
         height: mode === "print" ? undefined : stackHeight * scale,
         overflow: mode === "print" ? undefined : "hidden",
       }}

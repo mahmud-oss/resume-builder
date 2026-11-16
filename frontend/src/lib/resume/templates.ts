@@ -163,3 +163,20 @@ export const DEFAULT_TEMPLATE_ID = "classic";
 export function getTemplate(id: string): TemplateConfig {
   return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
 }
+
+/**
+ * The sections next to this one in its own column, in document order. Moving a section swaps it with
+ * its neighbour in the same column, so the move is always visible.
+ */
+export function sectionNeighbours(
+  template: TemplateConfig,
+  sections: readonly { id: string; type: SectionType; column?: "main" | "side" }[],
+  id: string,
+): { prevId?: string; nextId?: string } {
+  const me = sections.find((s) => s.id === id);
+  if (!me) return {};
+  const mine = columnOf(template, me);
+  const column = sections.filter((s) => columnOf(template, s) === mine);
+  const at = column.findIndex((s) => s.id === id);
+  return { prevId: column[at - 1]?.id, nextId: column[at + 1]?.id };
+}

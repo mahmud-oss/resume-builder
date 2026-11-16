@@ -297,6 +297,72 @@ export function SectionActions({
 }
 
 /** Show or hide each field of an entry (or of the header), and add your own. */
+/** Show or hide each field, remove or add details of your own. Used by the "⋯" menu and by the phone sheet. */
+export function FieldsChecklist({
+  target,
+  fs,
+  fields,
+  edit,
+  large = false,
+}: {
+  target: FieldTarget;
+  fs: FieldSet;
+  fields: FieldDef[];
+  edit: Edit;
+  /** Bigger rows for fingers. */
+  large?: boolean;
+}) {
+  const row = large ? "py-2.5 text-base" : "py-1";
+  return (
+    <div>
+      <p className="px-1 pb-1 text-xs font-medium text-slate-500">Show on CV</p>
+      <ul>
+        {fields.map((f) => (
+          <li key={f.key}>
+            <label className={`flex cursor-pointer items-center gap-2 rounded px-1 hover:bg-slate-50 ${row}`}>
+              <input
+                type="checkbox"
+                className={large ? "h-5 w-5" : undefined}
+                checked={!fs.hiddenFields[f.key]}
+                onChange={() => edit(toggleFieldHidden(target, f.key))}
+              />
+              {f.label}
+            </label>
+          </li>
+        ))}
+        {fs.custom.map((c) => (
+          <li key={c.id} className={`flex items-center gap-1 rounded px-1 hover:bg-slate-50 ${row}`}>
+            <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                className={large ? "h-5 w-5" : undefined}
+                checked={!c.hidden}
+                onChange={() => edit(toggleCustomFieldHidden(target, c.id))}
+              />
+              <span className="truncate">{c.value || "Your detail"}</span>
+            </label>
+            <button
+              type="button"
+              aria-label="Remove field"
+              className={large ? "inline-flex h-10 w-10 items-center justify-center rounded text-slate-700" : btn}
+              onClick={() => edit(removeCustomField(target, c.id))}
+            >
+              <TrashIcon />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={() => edit(addCustomField(target))}
+        className={`mt-2 w-full rounded px-1 text-left text-brand hover:bg-slate-50 ${large ? "py-2.5 text-base" : "py-1.5"}`}
+      >
+        + Add your own detail
+      </button>
+    </div>
+  );
+}
+
 export function FieldsMenu({
   target,
   fs,
@@ -308,65 +374,9 @@ export function FieldsMenu({
 }) {
   const v = useVisual();
   if (!v) return null;
-  const { edit } = v;
   return (
-    <PortalMenu
-      label="Fields"
-      trigger={<MoreIcon />}
-      triggerClassName={btn}
-      width={250}
-    >
-      {() => (
-        <div>
-          <p className="px-1 pb-1 text-xs font-medium text-slate-500">
-            Show on CV
-          </p>
-          <ul>
-            {fields.map((f) => (
-              <li key={f.key}>
-                <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-slate-50">
-                  <input
-                    type="checkbox"
-                    checked={!fs.hiddenFields[f.key]}
-                    onChange={() => edit(toggleFieldHidden(target, f.key))}
-                  />
-                  {f.label}
-                </label>
-              </li>
-            ))}
-            {fs.custom.map((c) => (
-              <li
-                key={c.id}
-                className="flex items-center gap-1 rounded px-1 py-1 hover:bg-slate-50"
-              >
-                <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={!c.hidden}
-                    onChange={() => edit(toggleCustomFieldHidden(target, c.id))}
-                  />
-                  <span className="truncate">{c.value || "Your detail"}</span>
-                </label>
-                <button
-                  type="button"
-                  aria-label="Remove field"
-                  className={btn}
-                  onClick={() => edit(removeCustomField(target, c.id))}
-                >
-                  <TrashIcon />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => edit(addCustomField(target))}
-            className="mt-2 w-full rounded px-1 py-1.5 text-left text-brand hover:bg-slate-50"
-          >
-            + Add your own detail
-          </button>
-        </div>
-      )}
+    <PortalMenu label="Fields" trigger={<MoreIcon />} triggerClassName={btn} width={250}>
+      {() => <FieldsChecklist target={target} fs={fs} fields={fields} edit={v.edit} />}
     </PortalMenu>
   );
 }
