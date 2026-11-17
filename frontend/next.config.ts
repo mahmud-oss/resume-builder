@@ -7,9 +7,10 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   // Playwright drives a real browser and must stay a plain Node dependency, not be bundled.
   serverExternalPackages: ["playwright", "playwright-core", "@sparticuz/chromium"],
-  // The Chromium build is a binary the file tracer cannot see; ship it with the PDF route.
+  // The Chromium build is a binary, and playwright-core reads its own browsers.json at runtime; the file
+  // tracer sees neither, so ship them with the PDF route.
   outputFileTracingIncludes: {
-    "/export/pdf": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/export/pdf": ["./node_modules/@sparticuz/chromium/bin/**", "./node_modules/playwright-core/**/*"],
   },
   partialPrefetching: true,
   turbopack: {
