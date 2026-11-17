@@ -33,6 +33,5 @@ services:
         value: claude-haiku-5-5
       - key: ANTHROPIC_EFFORT
         value: low
-      # Secret: paste it in the Render dashboard; it is deliberately not stored in this file.
-      - key: ANTHROPIC_API_KEY
-        sync: false
+      # ANTHROPIC_API_KEY is deliberately not listed: add it in the Render dashboard (Environment tab).
+      # Without it the chat runs in demo mode.

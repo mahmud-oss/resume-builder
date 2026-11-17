@@ -90,8 +90,8 @@ the machine's emoji font, so install one (for example Noto Color Emoji) on a Lin
 
 ## Deploy (Render + Vercel)
 **Backend on Render.** `render.yaml` describes the Java service (built from `backend/Dockerfile`) and a Postgres
-database. In Render choose New > Blueprint, pick this repo, then paste `ANTHROPIC_API_KEY` when asked (it is
-the one secret deliberately not in the file). `JWT_SECRET` is generated for you. Flyway creates the tables on
+database. In Render choose New > Blueprint and pick this repo. Then add `ANTHROPIC_API_KEY` on the service's
+Environment tab (it is deliberately not in the file; until you do, the chat runs in demo mode). `JWT_SECRET` is generated for you. Flyway creates the tables on
 first start. The free plan sleeps after about 15 minutes idle (the first request then takes ~50 s) and its
 database expires after 30 days.
 
