@@ -2,6 +2,7 @@ package com.resumebuilder.auth;
 
 import java.util.Locale;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,14 +23,22 @@ public class AuthService {
     /** Compared against when the email is unknown, so response time does not reveal which emails exist. */
     private final String decoyHash;
 
-    public AuthService(UserRepository users, PasswordEncoder encoder, TokenService tokens) {
+    /** When false, nobody can create an account; existing users can still log in. */
+    private final boolean allowRegistration;
+
+    public AuthService(UserRepository users, PasswordEncoder encoder, TokenService tokens,
+            @Value("${app.auth.allow-registration:false}") boolean allowRegistration) {
         this.users = users;
+        this.allowRegistration = allowRegistration;
         this.encoder = encoder;
         this.tokens = tokens;
         this.decoyHash = encoder.encode("decoy-password-for-timing");
     }
 
     public AuthResponse register(RegisterRequest request) {
+        if (!allowRegistration) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Registration is closed");
+        }
         String email = normalise(request.email());
         String name = request.name() == null ? "" : request.name().trim();
         try {

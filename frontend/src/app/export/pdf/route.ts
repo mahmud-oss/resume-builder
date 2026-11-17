@@ -3,6 +3,9 @@ import type { NextRequest } from "next/server";
 import { renderPdf } from "@/lib/export/pdf";
 import { contentDisposition, MAX_BODY_BYTES, parseExportRequest, pdfFileName } from "@/lib/export/validate";
 
+// Starting Chromium and printing can take a while on a cold serverless function.
+export const maxDuration = 60;
+
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8080";
 
 function problem(status: number, message: string) {

@@ -1,0 +1,38 @@
+# Render Blueprint: the Java backend and its database. The frontend is deployed on Vercel.
+databases:
+  - name: resume-builder-db
+    plan: free
+    region: singapore
+    databaseName: resume_builder
+
+services:
+  - type: web
+    name: resume-builder-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: DB_HOST
+        fromDatabase: { name: resume-builder-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: resume-builder-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: resume-builder-db, property: database }
+      - key: DB_USERNAME
+        fromDatabase: { name: resume-builder-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: resume-builder-db, property: password }
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOW_REGISTRATION
+        value: "false"
+      - key: ANTHROPIC_MODEL
+        value: claude-haiku-5-5
+      - key: ANTHROPIC_EFFORT
+        value: low
+      # Secret: paste it in the Render dashboard; it is deliberately not stored in this file.
+      - key: ANTHROPIC_API_KEY
+        sync: false

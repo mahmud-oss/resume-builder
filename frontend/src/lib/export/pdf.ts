@@ -1,6 +1,7 @@
 import "server-only";
 
-import { chromium, type Browser } from "playwright";
+import chromiumPack from "@sparticuz/chromium";
+import { chromium, type Browser } from "playwright-core";
 
 import type { ResumeDoc } from "@/lib/resume/types";
 
@@ -9,14 +10,26 @@ import type { ResumeDoc } from "@/lib/resume/types";
  * What the PDF shows is exactly what the template renders: the same code draws the page.
  */
 
+// On Vercel there is no installed browser, so a small Chromium build that ships with the app is used.
+// Everywhere else the Chromium installed by `npx playwright install chromium` is used.
+async function launch(): Promise<Browser> {
+  if (process.env.VERCEL) {
+    return chromium.launch({
+      executablePath: await chromiumPack.executablePath(),
+      args: chromiumPack.args,
+      headless: true,
+    });
+  }
+  return chromium.launch();
+}
+
 // One browser is kept and reused (starting Chromium takes a second or two); each export gets its own
 // isolated context. If the browser dies it is started again on the next export.
 let browserPromise: Promise<Browser> | null = null;
 
 function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
-    browserPromise = chromium
-      .launch()
+    browserPromise = launch()
       .then((b) => {
         b.on("disconnected", () => {
           browserPromise = null;

@@ -6,7 +6,11 @@ const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8080";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   // Playwright drives a real browser and must stay a plain Node dependency, not be bundled.
-  serverExternalPackages: ["playwright", "playwright-core"],
+  serverExternalPackages: ["playwright", "playwright-core", "@sparticuz/chromium"],
+  // The Chromium build is a binary the file tracer cannot see; ship it with the PDF route.
+  outputFileTracingIncludes: {
+    "/export/pdf": ["./node_modules/@sparticuz/chromium/bin/**"],
+  },
   partialPrefetching: true,
   turbopack: {
     rules: {
