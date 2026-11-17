@@ -102,3 +102,13 @@ export const resumeApi = {
     api<ServerResume>(`/resumes/${id}`, { method: "PUT", body }),
   remove: (id: string) => api<void>(`/resumes/${id}`, { method: "DELETE" }),
 };
+
+// --- the AI assistant ----------------------------------------------------------------------------
+
+import type { AiStatus, ChatResponse } from "@/lib/ai/types";
+import type { ChatRequestBody } from "@/lib/ai/chat";
+
+export const aiApi = {
+  status: () => api<AiStatus>("/ai/status"),
+  chat: (body: ChatRequestBody) => api<ChatResponse>("/ai/chat", { method: "POST", body }),
+};

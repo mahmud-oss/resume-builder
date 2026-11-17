@@ -36,6 +36,7 @@ import { FloatingStyleBar } from "./FloatingStyleBar";
 import { StyleUiContext } from "./StyleUi";
 import { ThemeCustomiser } from "./ThemeCustomiser";
 import { ThemePicker } from "./ThemePicker";
+import { AiChatWidget } from "@/components/ai/AiChatWidget";
 import { FieldSheet } from "./FieldSheet";
 import { PreviewPanel } from "./PreviewPanel";
 import { VisualTopBar } from "./VisualTopBar";
@@ -520,6 +521,13 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
       {visualMode && previewOpen && !wide && (
         <PreviewPanel doc={doc} overlay onClose={() => setPreviewOpen(false)} />
       )}
+      <AiChatWidget
+        resumeId={id}
+        doc={doc}
+        edit={edit}
+        compact={compact}
+        hideLauncher={touchEditing && !!sheetKey}
+      />
       {touchEditing && sheetKey && (
         <FieldSheet
           doc={doc}

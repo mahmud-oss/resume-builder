@@ -1,8 +1,12 @@
 spring:
   application:
     name: resume-builder-backend
+  config:
+    # Local secrets live in backend/.env (one KEY=value per line, e.g. ANTHROPIC_API_KEY=...).
+    # The file is optional and is ignored by git.
+    import: optional:file:./.env[.properties]
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/resume_builder}
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:resume_builder}}
     username: ${DB_USERNAME:${USER:postgres}}
     password: ${DB_PASSWORD:}
 
@@ -10,6 +14,9 @@ server:
   port: ${PORT:8080}
 
 app:
+  auth:
+    # New accounts are refused unless this is true (set ALLOW_REGISTRATION=true to open signup).
+    allow-registration: ${ALLOW_REGISTRATION:false}
   jwt:
     # Set JWT_SECRET (at least 32 characters) in any shared or production environment.
     # When empty, a random key is generated at startup and sessions end on restart.
@@ -18,3 +25,15 @@ app:
   resume:
     # Upper bound on the stored JSON size for one resume (characters).
     max-json-length: 1000000
+  ai:
+    # The Anthropic API key. Leave it unset to run the chat in demo mode (a built-in scripted assistant,
+    # no external calls, no cost). Set it in backend/.env or the environment. Never commit it.
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${ANTHROPIC_MODEL:claude-opus-5-5}
+    # How hard the model thinks: low, medium, high. Lower is faster and cheaper.
+    effort: ${ANTHROPIC_EFFORT:low}
+    max-output-tokens: 4096
+    request-timeout-seconds: 60
+    # Limits per user, so one account cannot run up the bill.
+    max-turns-per-minute: 12
+    max-turns-per-day: 400

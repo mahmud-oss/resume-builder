@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { FieldsChecklist } from "@/components/resume/visual/Actions";
 import { editKey } from "@/components/resume/Editable";
+import { useKeyboardOffset } from "@/lib/useKeyboardOffset";
 import { describeRef, parseFocusKey } from "@/lib/resume/fieldAccess";
 import {
   applyEdit,
@@ -82,7 +83,7 @@ export function FieldSheet({
   const [tabState, setTabState] = useState<{ key: string; tab: Tab }>({ key: fieldKey, tab: "text" });
   const tab: Tab = tabState.key === fieldKey ? tabState.tab : "text";
   const setTab = (next: Tab) => setTabState({ key: fieldKey, tab: next });
-  const [keyboard, setKeyboard] = useState(0);
+  const keyboard = useKeyboardOffset();
   const sheet = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
 
@@ -98,20 +99,6 @@ export function FieldSheet({
   useEffect(() => {
     field.current?.focus();
   }, [fieldKey]);
-
-  // Lift the sheet above the on-screen keyboard.
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => setKeyboard(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, []);
 
   // Report the height (plus keyboard) so the page leaves room below its last line.
   useEffect(() => {
