@@ -96,8 +96,8 @@ function Checker() {
             <p className="mt-2 text-xs text-slate-500">After you change something, press “Reload after editing” above.</p>
           )}
 
-          <WritingReview key={snapshotKey(source)} snapshot={snapshot} />
-          <KeywordCheck key={snapshotKey(source)} source={source} />
+          <WritingReview key={`review:${snapshotKey(source)}`} snapshot={snapshot} />
+          <KeywordCheck key={`keywords:${snapshotKey(source)}`} source={source} />
         </>
       )}
     </main>
