@@ -228,7 +228,7 @@ export function Landing() {
                 Will use credits <ProBadge />
               </h3>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-600">
-                <li>AI help: CV upload, Job match, Tailor my resume, and the AI parts of the ATS checker</li>
+                <li>AI help: CV upload, the written drafts in the AI chat, Job match, Tailor my resume, and the AI parts of the ATS checker</li>
                 <li>PDF export</li>
               </ul>
               <p className="mt-3 text-sm text-slate-500">Prices are not set yet. Today all of it is free.</p>
