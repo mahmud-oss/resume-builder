@@ -71,6 +71,21 @@ The assistant may only use facts the user gave: a draft containing a number the 
 retried once and, if still wrong, shown with a warning. Messages and CV details (never the photo) are sent
 to Anthropic to write the answers; the chat says so on screen.
 
+## Upload an existing CV
+**Upload a CV** (dashboard, or the link on the templates page) takes a PDF or Word (.docx) file and turns it into an
+editable resume. The browser posts the file to `POST /api/ai/upload`; the backend checks it (type by its bytes, up to
+4 MB, up to 4 pages), has Claude read it, and returns the content as the editor's fields. The page then creates the
+resume, opens the editor, and shows what to double-check, with a button to fill the gaps in the AI chat.
+
+- PDFs are sent to Claude as documents (so scans and Bangla fonts work); Word files are read on the server and sent as text.
+- Bangla CVs are fine; the result is English, with names transliterated. Text that fits no field goes into an
+  "Other information" section, never dropped. Instructions hidden in the file are ignored and flagged.
+- The file is read in memory and never stored. Free for now; limited to 3 per minute and 5 per day per user
+  (`app.ai.max-uploads-per-day`), logged in `ai_usage` as `upload` / `upload_failed`.
+- `ANTHROPIC_UPLOAD_MODEL` (default `claude-sonnet-5-5`) picks the model. Without an API key it runs in demo mode
+  and returns a fixed sample CV, so the flow can be tried at no cost.
+- Not built yet: replacing or merging into an existing resume, per-field confidence, charging credits.
+
 ## PDF export
 The editor's **Download PDF** button posts the CV to `POST /export/pdf` (a route in the frontend, not the
 backend). The route checks the login token with the backend, then opens the app's own `/print` page in

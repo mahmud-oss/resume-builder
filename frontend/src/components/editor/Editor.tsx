@@ -39,6 +39,7 @@ import { ThemePicker } from "./ThemePicker";
 import { AiChatWidget } from "@/components/ai/AiChatWidget";
 import { FieldSheet } from "./FieldSheet";
 import { PreviewPanel } from "./PreviewPanel";
+import { ImportBanner } from "./ImportBanner";
 import { VisualTopBar } from "./VisualTopBar";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { downloadPdf } from "@/lib/exportPdf";
@@ -361,6 +362,7 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
           onZoom={setZoom}
         />
       )}
+      <ImportBanner resumeId={id} />
       {exportError && (
         <p
           role="alert"

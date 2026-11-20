@@ -1,6 +1,11 @@
 spring:
   application:
     name: resume-builder-backend
+  servlet:
+    multipart:
+      # CV uploads: the app also checks the size itself, these just stop oversized requests early.
+      max-file-size: 4MB
+      max-request-size: 5MB
   config:
     # Local secrets live in backend/.env (one KEY=value per line, e.g. ANTHROPIC_API_KEY=...).
     # The file is optional and is ignored by git.
@@ -35,5 +40,10 @@ app:
     max-output-tokens: 4096
     request-timeout-seconds: 60
     # Limits per user, so one account cannot run up the bill.
+    # CV upload (PDF/DOCX -> resume fields). Needs a stronger model than the chat; free for now, limited per user.
+    upload-model: ${ANTHROPIC_UPLOAD_MODEL:claude-sonnet-5-5}
+    upload-max-output-tokens: 8000
+    upload-timeout-seconds: 120
+    max-uploads-per-day: 5
     max-turns-per-minute: 12
     max-turns-per-day: 400

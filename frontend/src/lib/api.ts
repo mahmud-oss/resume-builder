@@ -43,15 +43,17 @@ export function onUnauthorised(fn: Listener) {
 
 export async function api<T>(path: string, init: { method?: string; body?: unknown; keepalive?: boolean } = {}): Promise<T> {
   const token = getToken();
+  // A file upload sends a FormData as it is; the browser adds the multipart header itself.
+  const isForm = typeof FormData !== "undefined" && init.body instanceof FormData;
   let res: Response;
   try {
     res = await fetch(`/api${path}`, {
       method: init.method ?? "GET",
       headers: {
-        ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(init.body !== undefined && !isForm ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      body: init.body === undefined ? undefined : isForm ? (init.body as FormData) : JSON.stringify(init.body),
       keepalive: init.keepalive,
     });
   } catch {
@@ -107,8 +109,15 @@ export const resumeApi = {
 
 import type { AiStatus, ChatResponse } from "@/lib/ai/types";
 import type { ChatRequestBody } from "@/lib/ai/chat";
+import type { UploadResponse } from "@/lib/upload/convert";
 
 export const aiApi = {
   status: () => api<AiStatus>("/ai/status"),
   chat: (body: ChatRequestBody) => api<ChatResponse>("/ai/chat", { method: "POST", body }),
+  /** A PDF or Word file; the server reads it and returns the CV's content as fields. */
+  upload: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api<UploadResponse>("/ai/upload", { method: "POST", body: form });
+  },
 };

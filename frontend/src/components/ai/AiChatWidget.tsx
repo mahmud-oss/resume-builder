@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { OPEN_AI_CHAT_EVENT } from "@/lib/upload/review";
+
 import { useKeyboardOffset } from "@/lib/useKeyboardOffset";
 import type { Edit } from "@/components/editor/FieldEditors";
 import { topicLabel, topicStatus } from "@/lib/ai/topics";
@@ -56,6 +58,14 @@ export function AiChatWidget({
     setEverOpened(true);
     setSeen(assistantCount);
   }
+  // "Fill the gaps with AI chat" (after a CV import) opens the chat from elsewhere on the page.
+  useEffect(() => {
+    const openChat = () => show();
+    window.addEventListener(OPEN_AI_CHAT_EVENT, openChat);
+    return () => window.removeEventListener(OPEN_AI_CHAT_EVENT, openChat);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assistantCount]);
+
   function minimize() {
     setOpen(false);
     setSeen(assistantCount);

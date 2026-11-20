@@ -9,3 +9,6 @@
 # Editor
 .idea/
 .vscode/
+
+# Private notes (deployment IDs, etc.)
+*.local.md

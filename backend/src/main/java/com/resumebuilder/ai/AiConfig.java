@@ -29,4 +29,20 @@ public class AiConfig {
         log.info("AI chat uses Anthropic model {} (effort {}).", model, effort);
         return new AnthropicChatClient(json, apiKey.trim(), model, effort, maxOutputTokens, timeoutSeconds);
     }
+
+    /** Reads uploaded CVs: the real model when an API key is set, otherwise a fixed sample (demo mode). */
+    @Bean
+    CvExtractor cvExtractor(
+            JsonMapper json,
+            @Value("${app.ai.api-key:}") String apiKey,
+            @Value("${app.ai.upload-model:claude-sonnet-5-5}") String model,
+            @Value("${app.ai.upload-max-output-tokens:8000}") long maxOutputTokens,
+            @Value("${app.ai.upload-timeout-seconds:120}") long timeoutSeconds) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("ANTHROPIC_API_KEY is not set: CV upload runs in DEMO mode (returns a sample CV).");
+            return new DemoCvExtractor();
+        }
+        log.info("CV upload uses Anthropic model {}.", model);
+        return new AnthropicCvExtractor(json, apiKey.trim(), model, maxOutputTokens, timeoutSeconds);
+    }
 }

@@ -33,9 +33,14 @@ function List() {
     <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">My resumes</h1>
-        <Link href="/templates" className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:opacity-90">
-          New resume
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/upload" className="rounded-md border border-slate-300 bg-white px-4 py-2 font-medium hover:bg-slate-50">
+            Upload a CV
+          </Link>
+          <Link href="/templates" className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:opacity-90">
+            New resume
+          </Link>
+        </div>
       </div>
       {error && <p role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       {items === null && !error && <p className="mt-6 text-slate-500">Loading…</p>}
@@ -44,6 +49,10 @@ function List() {
           <p className="text-slate-600">You have no resumes yet.</p>
           <Link href="/templates" className="mt-3 inline-block font-medium text-brand hover:underline">
             Choose a template to start
+          </Link>
+          <span className="mx-2 text-slate-400">or</span>
+          <Link href="/upload" className="inline-block font-medium text-brand hover:underline">
+            upload a CV you already have
           </Link>
         </div>
       )}

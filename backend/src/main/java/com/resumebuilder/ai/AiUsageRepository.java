@@ -39,4 +39,14 @@ class AiUsageRepository {
                 .query(Long.class)
                 .single();
     }
+
+    /** Calls of the given kinds (any model, real calls only) since the given time. */
+    long countSince(UUID userId, Instant since, java.util.List<String> actions) {
+        return jdbc.sql("SELECT count(*) FROM ai_usage WHERE user_id = :user AND created_at >= :since AND demo = FALSE AND action IN (:actions)")
+                .param("user", userId)
+                .param("since", java.sql.Timestamp.from(since))
+                .param("actions", actions)
+                .query(Long.class)
+                .single();
+    }
 }
