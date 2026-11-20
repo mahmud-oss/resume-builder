@@ -108,6 +108,27 @@ Fair, Needs work), never a percentage.
 | `ANTHROPIC_REVIEW_MODEL` | `claude-haiku-5-5` | Model for the writing review |
 | `MAX_UPLOADS_PER_DAY`, `MAX_ATS_FILES_PER_DAY`, `MAX_REVIEWS_PER_DAY` | `0` (none) | Daily caps per user for CV upload, ATS file checks and writing reviews; a per-minute guard of 6 always applies |
 
+## Job match
+**Job match** (`/job-match`, labelled Pro) compares a CV with a pasted job description: an estimate band (Strong, Good,
+Partial, Low match), what the CV already shows, what the job asks for that it does not (required vs nice to have), and
+what to do about it. Like the ATS checker it takes a saved resume or an uploaded file, and explanations can be in English
+or Bangla (the matching is always English).
+
+- **One shared analysis** (`POST /api/ai/job-match`): the same call serves Job match, the ATS checker's keyword check and
+  (next) Tailor. The browser keeps the latest result for the session, keyed to the CV text and the job description, so
+  another tool reuses it instead of asking the AI again.
+- **Truthfulness check** (`MatchService.checked`): a "matching" skill needs a quote that is really in the CV; a "missing"
+  skill needs a quote that is really in the job description and must not already be in the CV. Anything else is dropped.
+  If nothing matches, the band is capped at Low.
+- **"I have this"** on a missing skill (saved resumes only) opens the editor with the AI chat ready and a first message
+  typed in for the user to finish. Nothing is added to the CV automatically.
+- The job description is pasted text, up to 10,000 characters, kept in the browser tab and shared by the tools.
+
+| Setting (backend) | Default | What it does |
+|---|---|---|
+| `ANTHROPIC_MATCH_MODEL` | `claude-sonnet-5-5` | Model for the analysis |
+| `MAX_MATCHES_PER_DAY` | `0` (none) | Daily cap per user; the per-minute guard of 6 always applies |
+
 ## PDF export
 The editor's **Download PDF** button posts the CV to `POST /export/pdf` (a route in the frontend, not the
 backend). The route checks the login token with the backend, then opens the app's own `/print` page in

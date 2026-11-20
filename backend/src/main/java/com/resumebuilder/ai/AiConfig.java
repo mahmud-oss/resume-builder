@@ -61,4 +61,20 @@ public class AiConfig {
         log.info("Writing review uses Anthropic model {}.", model);
         return new AnthropicReviewer(json, apiKey.trim(), model, maxOutputTokens, timeoutSeconds);
     }
+
+    /** Compares a CV with a job description: the real model when an API key is set, otherwise a sample (demo mode). */
+    @Bean
+    MatchAnalyzer matchAnalyzer(
+            JsonMapper json,
+            @Value("${app.ai.api-key:}") String apiKey,
+            @Value("${app.ai.match-model:claude-sonnet-5-5}") String model,
+            @Value("${app.ai.match-max-output-tokens:4000}") long maxOutputTokens,
+            @Value("${app.ai.match-timeout-seconds:90}") long timeoutSeconds) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("ANTHROPIC_API_KEY is not set: job match runs in DEMO mode (a rough sample).");
+            return new DemoMatchAnalyzer();
+        }
+        log.info("Job match uses Anthropic model {}.", model);
+        return new AnthropicMatchAnalyzer(json, apiKey.trim(), model, maxOutputTokens, timeoutSeconds);
+    }
 }

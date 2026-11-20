@@ -16,7 +16,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard", label: "My resumes", ready: true },
   { href: "/upload", label: "Upload CV", pro: true, ready: true },
   { href: "/ats-checker", label: "ATS checker", ready: true },
-  { href: "/job-match", label: "Job match", pro: true, ready: false },
+  { href: "/job-match", label: "Job match", pro: true, ready: true },
   { href: "/tailor", label: "Tailor my resume", pro: true, ready: false },
   { href: "/templates", label: "Templates", ready: true },
 ];

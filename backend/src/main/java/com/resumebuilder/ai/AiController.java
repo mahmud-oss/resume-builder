@@ -16,6 +16,8 @@ import com.resumebuilder.ai.ChatDtos.ChatRequest;
 import com.resumebuilder.ai.ChatDtos.ChatResponse;
 import com.resumebuilder.ai.ChatDtos.Status;
 import com.resumebuilder.ai.AtsDtos.AtsFileResponse;
+import com.resumebuilder.ai.MatchDtos.MatchRequest;
+import com.resumebuilder.ai.MatchDtos.MatchResponse;
 import com.resumebuilder.ai.ReviewDtos.ReviewRequest;
 import com.resumebuilder.ai.ReviewDtos.ReviewResponse;
 import com.resumebuilder.ai.UploadDtos.UploadResponse;
@@ -30,12 +32,15 @@ public class AiController {
     private final UploadService uploads;
     private final AtsService ats;
     private final ReviewService reviews;
+    private final MatchService matches;
 
-    public AiController(ChatService chat, UploadService uploads, AtsService ats, ReviewService reviews) {
+    public AiController(ChatService chat, UploadService uploads, AtsService ats, ReviewService reviews,
+                        MatchService matches) {
         this.chat = chat;
         this.uploads = uploads;
         this.ats = ats;
         this.reviews = reviews;
+        this.matches = matches;
     }
 
     /** Whether the assistant is available, and whether it is the built-in demo. */
@@ -65,5 +70,11 @@ public class AiController {
     @PostMapping("/writing-review")
     ReviewResponse writingReview(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ReviewRequest request) {
         return reviews.review(UUID.fromString(jwt.getSubject()), request.cv());
+    }
+
+    /** Compares a CV with a pasted job description (Job Match). Also used by the ATS keyword check and Tailor. */
+    @PostMapping("/job-match")
+    MatchResponse jobMatch(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody MatchRequest request) {
+        return matches.match(UUID.fromString(jwt.getSubject()), request);
     }
 }

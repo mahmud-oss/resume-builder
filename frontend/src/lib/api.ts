@@ -111,6 +111,7 @@ import type { AiStatus, ChatResponse } from "@/lib/ai/types";
 import type { ChatRequestBody } from "@/lib/ai/chat";
 import type { UploadResponse } from "@/lib/upload/convert";
 import type { AtsFileResponse, ReviewResponse } from "@/lib/ats/types";
+import type { Language, MatchAnalysis } from "@/lib/match/types";
 import type { Snapshot } from "@/lib/ai/snapshot";
 
 export const aiApi = {
@@ -130,4 +131,7 @@ export const aiApi = {
   },
   /** Feedback on the CV's wording. `cv` is the compact snapshot the chat also uses. */
   writingReview: (cv: Snapshot) => api<ReviewResponse>("/ai/writing-review", { method: "POST", body: { cv } }),
+  /** Compares the CV with a pasted job description. Shared by Job match, the ATS keyword check and Tailor. */
+  jobMatch: (cv: Snapshot, jobDescription: string, language: Language) =>
+    api<MatchAnalysis>("/ai/job-match", { method: "POST", body: { cv, jobDescription, language } }),
 };

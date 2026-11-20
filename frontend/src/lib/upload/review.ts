@@ -34,5 +34,10 @@ export function clearImportReview(resumeId: string) {
   }
 }
 
-/** The editor listens for this to open the AI chat (used by "Fill the gaps with AI chat"). */
+/**
+ * The editor listens for this to open the AI chat (used by "Fill the gaps with AI chat" and by "I have this" on
+ * Job match). `detail.prefill` is a first message to put in the box for the user to finish; it is never sent for them.
+ */
 export const OPEN_AI_CHAT_EVENT = "rb:open-ai-chat";
+
+export type OpenAiChatDetail = { prefill?: string };

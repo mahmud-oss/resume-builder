@@ -39,6 +39,7 @@ import { ThemePicker } from "./ThemePicker";
 import { AiChatWidget } from "@/components/ai/AiChatWidget";
 import { FieldSheet } from "./FieldSheet";
 import { PreviewPanel } from "./PreviewPanel";
+import { ChatFromLink } from "./ChatFromLink";
 import { ImportBanner } from "./ImportBanner";
 import { VisualTopBar } from "./VisualTopBar";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -530,6 +531,7 @@ export function Editor({ id, initial }: { id: string; initial: ResumeDoc }) {
         compact={compact}
         hideLauncher={touchEditing && !!sheetKey}
       />
+      <ChatFromLink />
       {touchEditing && sheetKey && (
         <FieldSheet
           doc={doc}
