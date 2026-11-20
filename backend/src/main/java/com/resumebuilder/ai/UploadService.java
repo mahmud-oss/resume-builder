@@ -49,33 +49,23 @@ public class UploadService {
 
     private final CvExtractor extractor;
     private final AiUsageRepository usage;
-    private final AiRateLimiter limiter = new AiRateLimiter(3);
+    private final AiRateLimiter limiter = new AiRateLimiter(6);
     private final int maxPerDay;
 
     UploadService(CvExtractor extractor, AiUsageRepository usage,
-                  @Value("${app.ai.max-uploads-per-day:5}") int maxPerDay) {
+                  @Value("${app.ai.max-uploads-per-day:0}") int maxPerDay) {
         this.extractor = extractor;
         this.usage = usage;
         this.maxPerDay = maxPerDay;
     }
 
     public UploadResponse convert(UUID userId, String fileName, byte[] bytes) {
-        if (bytes == null || bytes.length == 0) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "That file is empty.");
-        }
-        if (bytes.length > MAX_BYTES) {
-            throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "That file is too large. The limit is 4 MB.");
-        }
-        // The file's own bytes decide what it is, not its name or what the browser says.
-        Source source = isPdf(bytes) ? pdfSource(bytes, fileName) : isZip(bytes) ? docxSource(bytes, fileName) : null;
-        if (source == null) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Please upload a PDF or Word (.docx) file.");
-        }
+        Source source = prepare(bytes, fileName);
 
         if (!limiter.tryAcquire(userId, System.currentTimeMillis())) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "You are going too fast. Please wait a moment.");
         }
-        if (!extractor.demo()
+        if (!extractor.demo() && maxPerDay > 0
                 && usage.countSince(userId, Instant.now().minus(Duration.ofDays(1)), List.of("upload", "upload_failed")) >= maxPerDay) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "You have reached today's limit for CV uploads. Please try again tomorrow.");
         }
@@ -95,6 +85,22 @@ public class UploadService {
     }
 
     // --- checking the file --------------------------------------------------------------------
+
+    /** Checks an upload (size, real type, pages, text) and says how it will be read. Shared with the ATS checker. */
+    static Source prepare(byte[] bytes, String fileName) {
+        if (bytes == null || bytes.length == 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "That file is empty.");
+        }
+        if (bytes.length > MAX_BYTES) {
+            throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "That file is too large. The limit is 4 MB.");
+        }
+        // The file's own bytes decide what it is, not its name or what the browser says.
+        Source source = isPdf(bytes) ? pdfSource(bytes, fileName) : isZip(bytes) ? docxSource(bytes, fileName) : null;
+        if (source == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Please upload a PDF or Word (.docx) file.");
+        }
+        return source;
+    }
 
     static boolean isPdf(byte[] b) {
         return b.length > 5 && b[0] == '%' && b[1] == 'P' && b[2] == 'D' && b[3] == 'F' && b[4] == '-';

@@ -15,6 +15,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.resumebuilder.ai.ChatDtos.ChatRequest;
 import com.resumebuilder.ai.ChatDtos.ChatResponse;
 import com.resumebuilder.ai.ChatDtos.Status;
+import com.resumebuilder.ai.AtsDtos.AtsFileResponse;
+import com.resumebuilder.ai.ReviewDtos.ReviewRequest;
+import com.resumebuilder.ai.ReviewDtos.ReviewResponse;
 import com.resumebuilder.ai.UploadDtos.UploadResponse;
 
 import jakarta.validation.Valid;
@@ -25,10 +28,14 @@ public class AiController {
 
     private final ChatService chat;
     private final UploadService uploads;
+    private final AtsService ats;
+    private final ReviewService reviews;
 
-    public AiController(ChatService chat, UploadService uploads) {
+    public AiController(ChatService chat, UploadService uploads, AtsService ats, ReviewService reviews) {
         this.chat = chat;
         this.uploads = uploads;
+        this.ats = ats;
+        this.reviews = reviews;
     }
 
     /** Whether the assistant is available, and whether it is the built-in demo. */
@@ -46,5 +53,17 @@ public class AiController {
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     UploadResponse upload(@AuthenticationPrincipal Jwt jwt, @RequestParam("file") MultipartFile file) throws java.io.IOException {
         return uploads.convert(UUID.fromString(jwt.getSubject()), file.getOriginalFilename(), file.getBytes());
+    }
+
+    /** The ATS checker for an uploaded file: findings about the file itself, plus the CV read from it. */
+    @PostMapping(value = "/ats-file", consumes = "multipart/form-data")
+    AtsFileResponse atsFile(@AuthenticationPrincipal Jwt jwt, @RequestParam("file") MultipartFile file) throws java.io.IOException {
+        return ats.checkFile(UUID.fromString(jwt.getSubject()), file.getOriginalFilename(), file.getBytes());
+    }
+
+    /** Feedback on the wording of a CV's summary and bullets, with suggested rewrites. */
+    @PostMapping("/writing-review")
+    ReviewResponse writingReview(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ReviewRequest request) {
+        return reviews.review(UUID.fromString(jwt.getSubject()), request.cv());
     }
 }

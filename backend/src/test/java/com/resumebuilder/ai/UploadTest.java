@@ -184,10 +184,21 @@ class UploadTest {
     }
 
     @Test
+    void hasNoDailyCapWhenItIsZero() throws Exception {
+        CvExtractor extractor = Mockito.mock(CvExtractor.class);
+        Mockito.when(extractor.demo()).thenReturn(false);
+        Mockito.when(extractor.modelName()).thenReturn("m");
+        Mockito.when(extractor.extract(Mockito.any())).thenReturn(new CvExtractor.Result(sample(), ChatModelClient.Usage.NONE));
+        AiUsageRepository usage = Mockito.mock(AiUsageRepository.class);
+        Mockito.when(usage.countSince(Mockito.eq(USER), Mockito.any(), Mockito.anyList())).thenReturn(999L);
+        assertThat(new UploadService(extractor, usage, 0).convert(USER, "a.pdf", pdf(1))).isNotNull();
+    }
+
+    @Test
     void slowsDownAFastSequenceOfUploads() throws Exception {
         Fixture f = fixture(true);
         byte[] file = pdf(1);
-        for (int i = 0; i < 3; i++) f.service().convert(USER, "a.pdf", file);
+        for (int i = 0; i < 6; i++) f.service().convert(USER, "a.pdf", file);
         assertThat(rejected(f, "a.pdf", file).status().value()).isEqualTo(429);
     }
 

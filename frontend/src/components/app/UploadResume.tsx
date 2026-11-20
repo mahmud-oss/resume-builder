@@ -7,11 +7,10 @@ import { useRef, useState } from "react";
 import { ProBadge } from "@/components/app/ProBadge";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { PRO_HINT } from "@/lib/pro";
-import { aiApi, ApiError, resumeApi } from "@/lib/api";
+import { aiApi, ApiError } from "@/lib/api";
 import { DEFAULT_TEMPLATE_ID, getTemplate, TEMPLATES } from "@/lib/resume/templates";
-import { extractionToDoc, titleFor } from "@/lib/upload/convert";
 import { fileProblem, UPLOAD_ACCEPT } from "@/lib/upload/file";
-import { saveImportReview } from "@/lib/upload/review";
+import { createResumeFromExtraction, EmptyCvError } from "@/lib/upload/import";
 
 function Upload() {
   const router = useRouter();
@@ -30,18 +29,12 @@ function Upload() {
     try {
       setBusy("Reading your CV… this can take up to a minute.");
       const { cv, demo } = await aiApi.upload(file);
-      const { doc, notes, empty } = extractionToDoc(cv, templateId, titleFor(cv, file.name));
-      if (empty) {
-        setBusy(null);
-        return setError("We could not find any CV content in that file. Please try another file.");
-      }
       setBusy("Creating your resume…");
-      const created = await resumeApi.create({ title: doc.title, templateId: doc.templateId, data: doc.data, design: doc.design });
-      saveImportReview(created.id, { notes, demo });
-      router.replace(`/editor/${created.id}`);
+      const id = await createResumeFromExtraction(cv, { fileName: file.name, demo, templateId });
+      router.replace(`/editor/${id}`);
     } catch (e) {
       setBusy(null);
-      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
+      setError(e instanceof ApiError || e instanceof EmptyCvError ? e.message : "Something went wrong. Please try again.");
     } finally {
       if (input.current) input.current.value = "";
     }

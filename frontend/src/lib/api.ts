@@ -110,6 +110,8 @@ export const resumeApi = {
 import type { AiStatus, ChatResponse } from "@/lib/ai/types";
 import type { ChatRequestBody } from "@/lib/ai/chat";
 import type { UploadResponse } from "@/lib/upload/convert";
+import type { AtsFileResponse, ReviewResponse } from "@/lib/ats/types";
+import type { Snapshot } from "@/lib/ai/snapshot";
 
 export const aiApi = {
   status: () => api<AiStatus>("/ai/status"),
@@ -120,4 +122,12 @@ export const aiApi = {
     form.append("file", file);
     return api<UploadResponse>("/ai/upload", { method: "POST", body: form });
   },
+  /** ATS checker, uploaded file: what is wrong with the file itself, plus the CV read from it. */
+  atsFile: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api<AtsFileResponse>("/ai/ats-file", { method: "POST", body: form });
+  },
+  /** Feedback on the CV's wording. `cv` is the compact snapshot the chat also uses. */
+  writingReview: (cv: Snapshot) => api<ReviewResponse>("/ai/writing-review", { method: "POST", body: { cv } }),
 };

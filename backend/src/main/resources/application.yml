@@ -44,6 +44,13 @@ app:
     upload-model: ${ANTHROPIC_UPLOAD_MODEL:claude-sonnet-5-5}
     upload-max-output-tokens: 8000
     upload-timeout-seconds: 120
-    max-uploads-per-day: 5
+    # Daily caps per user for the AI features that read files (0 = none, the default while in development).
+    max-uploads-per-day: ${MAX_UPLOADS_PER_DAY:0}
+    max-ats-files-per-day: ${MAX_ATS_FILES_PER_DAY:0}
+    max-reviews-per-day: ${MAX_REVIEWS_PER_DAY:0}
+    # Writing review (the ATS checker's AI part): a cheap model is enough.
+    review-model: ${ANTHROPIC_REVIEW_MODEL:claude-haiku-5-5}
+    review-max-output-tokens: 3000
+    review-timeout-seconds: 60
     max-turns-per-minute: 12
     max-turns-per-day: 400

@@ -45,4 +45,20 @@ public class AiConfig {
         log.info("CV upload uses Anthropic model {}.", model);
         return new AnthropicCvExtractor(json, apiKey.trim(), model, maxOutputTokens, timeoutSeconds);
     }
+
+    /** Reviews a CV's wording: the real model when an API key is set, otherwise a sample (demo mode). */
+    @Bean
+    WritingReviewer writingReviewer(
+            JsonMapper json,
+            @Value("${app.ai.api-key:}") String apiKey,
+            @Value("${app.ai.review-model:claude-haiku-5-5}") String model,
+            @Value("${app.ai.review-max-output-tokens:3000}") long maxOutputTokens,
+            @Value("${app.ai.review-timeout-seconds:60}") long timeoutSeconds) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("ANTHROPIC_API_KEY is not set: the writing review runs in DEMO mode (one sample item).");
+            return new DemoReviewer();
+        }
+        log.info("Writing review uses Anthropic model {}.", model);
+        return new AnthropicReviewer(json, apiKey.trim(), model, maxOutputTokens, timeoutSeconds);
+    }
 }

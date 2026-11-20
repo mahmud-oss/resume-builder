@@ -86,6 +86,28 @@ resume, opens the editor, and shows what to double-check, with a button to fill 
   and returns a fixed sample CV, so the flow can be tried at no cost.
 - Not built yet: replacing or merging into an existing resume, per-field confidence, charging credits.
 
+## ATS checker
+**ATS checker** (side navigation, `/ats-checker`) tells a user whether an applicant tracking system can read their CV and
+what to fix. It checks one of their saved resumes or any uploaded PDF/DOCX, and shows an estimate band (Strong, Good,
+Fair, Needs work), never a percentage.
+
+- **Content rules** (`frontend/src/lib/ats/rules.ts`): fixed code, no AI, free. Critical (name, email, phone, experience
+  or education), warnings (summary, bullets, date styles, length, section names, skills, very short, Bangla script) and
+  notes (photo, icons, sidebar template). Band thresholds are in `bandFor`.
+- **File checks** for uploads (`FileChecks.java`, `POST /api/ai/ats-file`): no extractable text (a scan), signs of
+  columns or tables, graphics, unembedded fonts (PDF); layout tables, text boxes, columns, contact details in the header
+  or footer, pictures (DOCX). These are heuristics and the page says so. The same call has Claude read the CV once; the
+  page keeps that result in the browser session (never stored on the server) so it can be re-checked or imported into
+  the builder without reading it again.
+- **Review my writing** (`POST /api/ai/writing-review`, labelled Pro): suggested rewrites of the summary and bullets.
+  The server drops feedback about text that is not in the CV and any rewrite that adds a number.
+- Not built yet: the keyword check against a job description (it arrives with Job match).
+
+| Setting (backend) | Default | What it does |
+|---|---|---|
+| `ANTHROPIC_REVIEW_MODEL` | `claude-haiku-5-5` | Model for the writing review |
+| `MAX_UPLOADS_PER_DAY`, `MAX_ATS_FILES_PER_DAY`, `MAX_REVIEWS_PER_DAY` | `0` (none) | Daily caps per user for CV upload, ATS file checks and writing reviews; a per-minute guard of 6 always applies |
+
 ## PDF export
 The editor's **Download PDF** button posts the CV to `POST /export/pdf` (a route in the frontend, not the
 backend). The route checks the login token with the backend, then opens the app's own `/print` page in
