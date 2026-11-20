@@ -19,6 +19,10 @@ import com.resumebuilder.ai.AtsDtos.AtsFileResponse;
 import com.resumebuilder.ai.MatchDtos.MatchRequest;
 import com.resumebuilder.ai.MatchDtos.MatchResponse;
 import com.resumebuilder.ai.ReviewDtos.ReviewRequest;
+import com.resumebuilder.ai.TailorDtos.RegenerateRequest;
+import com.resumebuilder.ai.TailorDtos.RegenerateResponse;
+import com.resumebuilder.ai.TailorDtos.TailorRequest;
+import com.resumebuilder.ai.TailorDtos.TailorResponse;
 import com.resumebuilder.ai.ReviewDtos.ReviewResponse;
 import com.resumebuilder.ai.UploadDtos.UploadResponse;
 
@@ -33,14 +37,16 @@ public class AiController {
     private final AtsService ats;
     private final ReviewService reviews;
     private final MatchService matches;
+    private final TailorService tailors;
 
     public AiController(ChatService chat, UploadService uploads, AtsService ats, ReviewService reviews,
-                        MatchService matches) {
+                        MatchService matches, TailorService tailors) {
         this.chat = chat;
         this.uploads = uploads;
         this.ats = ats;
         this.reviews = reviews;
         this.matches = matches;
+        this.tailors = tailors;
     }
 
     /** Whether the assistant is available, and whether it is the built-in demo. */
@@ -76,5 +82,17 @@ public class AiController {
     @PostMapping("/job-match")
     MatchResponse jobMatch(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody MatchRequest request) {
         return matches.match(UUID.fromString(jwt.getSubject()), request);
+    }
+
+    /** Proposes wording changes that fit a resume to a job; the user accepts or rejects each one. */
+    @PostMapping("/tailor")
+    TailorResponse tailor(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody TailorRequest request) {
+        return tailors.tailor(UUID.fromString(jwt.getSubject()), request);
+    }
+
+    /** New wording for one proposed change. */
+    @PostMapping("/tailor/regenerate")
+    RegenerateResponse tailorRegenerate(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody RegenerateRequest request) {
+        return tailors.regenerate(UUID.fromString(jwt.getSubject()), request);
     }
 }

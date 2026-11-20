@@ -19,7 +19,7 @@ describe("side navigation", () => {
   });
 
   it("only links pages that exist", () => {
-    expect(NAV_ITEMS.filter((i) => i.ready).map((i) => i.href)).toEqual(["/dashboard", "/upload", "/ats-checker", "/job-match", "/templates"]);
+    expect(NAV_ITEMS.filter((i) => i.ready).map((i) => i.href)).toEqual(["/dashboard", "/upload", "/ats-checker", "/job-match", "/tailor", "/templates"]);
   });
 
   it("uses unique addresses", () => {

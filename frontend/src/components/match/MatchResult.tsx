@@ -132,11 +132,20 @@ export function MatchResult({
         )}
       </div>
 
-      <section aria-label="Tailor my resume" className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4 text-slate-500">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-700">
+      <section aria-label="Tailor my resume" className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
           Tailor my resume for this job <ProBadge />
         </h2>
-        <p className="mt-1 text-sm">Make a version of your resume that fits this job, using only what is already in it. Coming soon.</p>
+        <p className="mt-1 text-sm text-slate-600">
+          Make a version of your resume that fits this job, using only what is already in it. You accept or reject each change.
+        </p>
+        {saved ? (
+          <Link href="/tailor" className="mt-3 inline-block rounded-md bg-brand px-4 py-2 font-medium text-white hover:opacity-90">
+            Tailor my resume
+          </Link>
+        ) : (
+          <p className="mt-2 text-sm text-slate-500">Import this CV into the builder first; tailoring works on your resumes there.</p>
+        )}
       </section>
     </section>
   );

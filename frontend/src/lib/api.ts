@@ -84,7 +84,8 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
 
 export type User = { id: string; email: string; name: string | null };
 export type AuthResponse = { token: string; user: User };
-export type ResumeSummary = { id: string; title: string; templateId: string; updatedAt: string };
+/** `tailoredFrom` is the original a tailored version was made from, or null for an original. */
+export type ResumeSummary = { id: string; title: string; templateId: string; updatedAt: string; tailoredFrom: string | null };
 export type ServerResume = ResumeSummary & { data: unknown; design: unknown; createdAt: string };
 
 export const authApi = {
@@ -98,7 +99,7 @@ export const authApi = {
 export const resumeApi = {
   list: () => api<ResumeSummary[]>("/resumes"),
   get: (id: string) => api<ServerResume>(`/resumes/${id}`),
-  create: (body: { title?: string; templateId: string; data?: unknown; design?: unknown }) =>
+  create: (body: { title?: string; templateId: string; data?: unknown; design?: unknown; tailoredFrom?: string }) =>
     api<ServerResume>("/resumes", { method: "POST", body }),
   update: (id: string, body: { title: string; templateId: string; data: unknown; design: unknown }) =>
     api<ServerResume>(`/resumes/${id}`, { method: "PUT", body }),
@@ -112,6 +113,7 @@ import type { ChatRequestBody } from "@/lib/ai/chat";
 import type { UploadResponse } from "@/lib/upload/convert";
 import type { AtsFileResponse, ReviewResponse } from "@/lib/ats/types";
 import type { Language, MatchAnalysis } from "@/lib/match/types";
+import type { RegenerateResponse, TailorResponse } from "@/lib/tailor/types";
 import type { Snapshot } from "@/lib/ai/snapshot";
 
 export const aiApi = {
@@ -134,4 +136,10 @@ export const aiApi = {
   /** Compares the CV with a pasted job description. Shared by Job match, the ATS keyword check and Tailor. */
   jobMatch: (cv: Snapshot, jobDescription: string, language: Language) =>
     api<MatchAnalysis>("/ai/job-match", { method: "POST", body: { cv, jobDescription, language } }),
+  /** Proposes wording changes that fit the resume to the job. The user accepts or rejects each one. */
+  tailor: (cv: Snapshot, jobDescription: string, language: Language) =>
+    api<TailorResponse>("/ai/tailor", { method: "POST", body: { cv, jobDescription, language } }),
+  /** New wording for one proposed change, optionally steered by a short hint. */
+  tailorRegenerate: (body: { cv: Snapshot; jobDescription: string; entry: string; field: string; previous: string; hint: string; language: Language }) =>
+    api<RegenerateResponse>("/ai/tailor/regenerate", { method: "POST", body }),
 };

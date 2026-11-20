@@ -19,11 +19,11 @@ import org.springframework.stereotype.Repository;
 public class ResumeRepository {
 
     /** A stored resume, with data and design as raw JSON text. */
-    public record Row(UUID id, String title, String templateId, String data, String design,
+    public record Row(UUID id, String title, String templateId, String data, String design, UUID tailoredFrom,
                       java.time.Instant createdAt, java.time.Instant updatedAt) {
     }
 
-    private static final String COLUMNS = "id, title, template_id, data::text AS data, design::text AS design, created_at, updated_at";
+    private static final String COLUMNS = "id, title, template_id, data::text AS data, design::text AS design, tailored_from, created_at, updated_at";
 
     private static final RowMapper<Row> ROW_MAPPER = (ResultSet rs, int i) -> mapRow(rs);
 
@@ -48,16 +48,17 @@ public class ResumeRepository {
                 .optional();
     }
 
-    public Row insert(UUID userId, String title, String templateId, String dataJson, String designJson) {
+    public Row insert(UUID userId, String title, String templateId, String dataJson, String designJson, UUID tailoredFrom) {
         return jdbc.sql("""
-                INSERT INTO resumes (user_id, title, template_id, data, design)
-                VALUES (:userId, :title, :templateId, CAST(:data AS jsonb), CAST(:design AS jsonb))
+                INSERT INTO resumes (user_id, title, template_id, data, design, tailored_from)
+                VALUES (:userId, :title, :templateId, CAST(:data AS jsonb), CAST(:design AS jsonb), :tailoredFrom)
                 RETURNING\s""" + COLUMNS)
                 .param("userId", userId)
                 .param("title", title)
                 .param("templateId", templateId)
                 .param("data", dataJson)
                 .param("design", designJson)
+                .param("tailoredFrom", tailoredFrom)
                 .query(ROW_MAPPER)
                 .single();
     }
@@ -96,6 +97,7 @@ public class ResumeRepository {
                 rs.getString("template_id"),
                 rs.getString("data"),
                 rs.getString("design"),
+                rs.getObject("tailored_from", UUID.class),
                 rs.getObject("created_at", OffsetDateTime.class).toInstant(),
                 rs.getObject("updated_at", OffsetDateTime.class).toInstant());
     }

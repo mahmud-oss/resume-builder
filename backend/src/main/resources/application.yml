@@ -49,6 +49,11 @@ app:
     max-ats-files-per-day: ${MAX_ATS_FILES_PER_DAY:0}
     max-reviews-per-day: ${MAX_REVIEWS_PER_DAY:0}
     max-matches-per-day: ${MAX_MATCHES_PER_DAY:0}
+    max-tailors-per-day: ${MAX_TAILORS_PER_DAY:0}
+    # Tailoring rewrites the user's own words, so it uses the stronger model too.
+    tailor-model: ${ANTHROPIC_TAILOR_MODEL:claude-sonnet-5-5}
+    tailor-max-output-tokens: 6000
+    tailor-timeout-seconds: 120
     # Job match needs judgment, so a stronger model than the ATS writing review.
     match-model: ${ANTHROPIC_MATCH_MODEL:claude-sonnet-5-5}
     match-max-output-tokens: 4000

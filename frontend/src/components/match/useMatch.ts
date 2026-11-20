@@ -26,18 +26,24 @@ export function useMatch(value: CvSourceValue | null, jd: string, language?: Lan
   // A result just made for this CV and job description wins; otherwise one kept from earlier in the session.
   const analysis = fresh && fresh.cvKey === cvKey && fresh.jdKey === jdKey ? fresh.analysis : cached;
 
-  async function run(lang: Language = language ?? "en") {
-    if (!value || !cvKey) return;
+  /** Runs the analysis and returns it (or null if it could not be made). */
+  async function run(lang: Language = language ?? "en"): Promise<MatchAnalysis | null> {
+    if (!value || !cvKey) return null;
     const problem = jdProblem(jd);
-    if (problem) return setError(problem);
+    if (problem) {
+      setError(problem);
+      return null;
+    }
     setBusy(true);
     setError(null);
     try {
       const result = await aiApi.jobMatch(snapshotOf(value), jd.trim(), lang);
       saveMatch({ cvKey, jdKey, language: lang, analysis: result });
       setFresh({ cvKey, jdKey, analysis: result });
+      return result;
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
+      return null;
     } finally {
       setBusy(false);
     }

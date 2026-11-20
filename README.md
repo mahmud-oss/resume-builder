@@ -129,6 +129,28 @@ or Bangla (the matching is always English).
 | `ANTHROPIC_MATCH_MODEL` | `claude-sonnet-5-5` | Model for the analysis |
 | `MAX_MATCHES_PER_DAY` | `0` (none) | Daily cap per user; the per-minute guard of 6 always applies |
 
+## Tailor my resume
+**Tailor my resume** (`/tailor`, labelled Pro) makes a version of one of the user's resumes for one job. It needs a resume in
+the builder (saved or imported), a pasted job description, and works on **original** resumes only.
+
+1. The shared Job match analysis runs first (or is reused). A **Low** match shows a warning with *Continue anyway*.
+2. `POST /api/ai/tailor` proposes changes. The user **accepts, rejects, edits or regenerates** each one
+   (`POST /api/ai/tailor/regenerate`, with hints like "More concise").
+3. *Create version* makes a new resume from the accepted changes only, linked to its original. The original is never changed.
+
+**What may change** (`TailorService`): the summary wording, experience and project bullet points, and the order of skills.
+Never job titles, companies, dates, degrees, names or contact details. The server drops any proposed change that adds a number
+the resume does not have, adds, removes or renames a skill, or uses a specific term (an acronym such as SAP, or a name like
+C++ or Node.js) that the job description has and the resume lacks. The "before" text is read from the resume on the server.
+
+**Versions** are ordinary resumes with a `tailored_from` link (migration `V3`). The dashboard lists them under their original;
+deleting the original keeps them as standalone resumes. The server refuses to tailor a version or someone else's resume.
+
+| Setting (backend) | Default | What it does |
+|---|---|---|
+| `ANTHROPIC_TAILOR_MODEL` | `claude-sonnet-5-5` | Model for the changes |
+| `MAX_TAILORS_PER_DAY` | `0` (none) | Daily cap per user; the per-minute guard of 6 always applies |
+
 ## PDF export
 The editor's **Download PDF** button posts the CV to `POST /export/pdf` (a route in the frontend, not the
 backend). The route checks the login token with the backend, then opens the app's own `/print` page in

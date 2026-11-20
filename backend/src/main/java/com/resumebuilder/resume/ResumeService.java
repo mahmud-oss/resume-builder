@@ -34,7 +34,7 @@ public class ResumeService {
 
     public List<ResumeSummary> list(UUID userId) {
         return repository.list(userId).stream()
-                .map(r -> new ResumeSummary(r.id(), r.title(), r.templateId(), r.updatedAt()))
+                .map(r -> new ResumeSummary(r.id(), r.title(), r.templateId(), r.updatedAt(), r.tailoredFrom()))
                 .toList();
     }
 
@@ -46,7 +46,16 @@ public class ResumeService {
         String title = request.title() == null || request.title().isBlank() ? DEFAULT_TITLE : request.title().trim();
         String data = serialise(request.data());
         String design = serialise(request.design());
-        return toResponse(repository.insert(userId, title, request.templateId(), data, design));
+        UUID tailoredFrom = request.tailoredFrom();
+        if (tailoredFrom != null) {
+            // Only one of the user's own originals can be tailored: not someone else's, and not a version.
+            ResumeRepository.Row original = repository.find(userId, tailoredFrom)
+                    .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "The original resume was not found"));
+            if (original.tailoredFrom() != null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Tailor from your original resume, not from a tailored version");
+            }
+        }
+        return toResponse(repository.insert(userId, title, request.templateId(), data, design, tailoredFrom));
     }
 
     public ResumeResponse update(UUID userId, UUID id, UpdateResumeRequest request) {
@@ -80,7 +89,7 @@ public class ResumeService {
 
     private ResumeResponse toResponse(ResumeRepository.Row row) {
         return new ResumeResponse(row.id(), row.title(), row.templateId(),
-                json.readTree(row.data()), json.readTree(row.design()), row.createdAt(), row.updatedAt());
+                json.readTree(row.data()), json.readTree(row.design()), row.tailoredFrom(), row.createdAt(), row.updatedAt());
     }
 
     private static ApiException notFound() {

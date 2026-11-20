@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { resumeApi, type ResumeSummary } from "@/lib/api";
 import { getTemplate } from "@/lib/resume/templates";
+import { groupVersions } from "@/lib/tailor/group";
 
 function List() {
   const [items, setItems] = useState<ResumeSummary[] | null>(null);
@@ -28,6 +29,27 @@ function List() {
       setError((e as Error).message);
     }
   }
+
+  // One resume's row. A tailored version says what it was made for, and that it is a version.
+  const row = (r: ResumeSummary, version: boolean) => (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <Link href={`/editor/${r.id}`} className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-medium">{r.title || "Untitled resume"}</span>
+          {version && <span className="shrink-0 rounded bg-blue-100 px-1.5 py-px text-[10px] font-semibold uppercase leading-4 text-blue-800">Tailored</span>}
+        </div>
+        <div className="text-sm text-slate-500">
+          {getTemplate(r.templateId).name} · edited {new Date(r.updatedAt).toLocaleString()}
+        </div>
+      </Link>
+      <Link href={`/editor/${r.id}`} className="text-sm font-medium text-brand hover:underline">
+        Edit
+      </Link>
+      <button onClick={() => remove(r)} className="text-sm text-red-700 hover:underline">
+        Delete
+      </button>
+    </div>
+  );
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
@@ -57,22 +79,19 @@ function List() {
         </div>
       )}
       <ul className="mt-6 space-y-3">
-        {items?.map((r) => (
-          <li key={r.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4">
-            <Link href={`/editor/${r.id}`} className="min-w-0 flex-1">
-              <div className="truncate font-medium">{r.title || "Untitled resume"}</div>
-              <div className="text-sm text-slate-500">
-                {getTemplate(r.templateId).name} · edited {new Date(r.updatedAt).toLocaleString()}
-              </div>
-            </Link>
-            <Link href={`/editor/${r.id}`} className="text-sm font-medium text-brand hover:underline">
-              Edit
-            </Link>
-            <button onClick={() => remove(r)} className="text-sm text-red-700 hover:underline">
-              Delete
-            </button>
-          </li>
-        ))}
+        {items &&
+          groupVersions(items).map(({ original, versions }) => (
+            <li key={original.id}>
+              {row(original, false)}
+              {versions.length > 0 && (
+                <ul aria-label={`Tailored versions of ${original.title || "Untitled resume"}`} className="ml-6 mt-2 space-y-2 border-l-2 border-slate-200 pl-3">
+                  {versions.map((v) => (
+                    <li key={v.id}>{row(v, true)}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
       </ul>
     </main>
   );

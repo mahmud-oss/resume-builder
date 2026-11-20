@@ -15,9 +15,22 @@ type Tab = "saved" | "file";
  * Lets the user pick the CV a tool will work on: one of their saved resumes, or a PDF/Word file. An uploaded file
  * is read by the AI once and kept in this browser tab, so every tool can use it without reading it again.
  */
-export function CvSource({ value, onChange }: { value: CvSourceValue | null; onChange: (v: CvSourceValue | null) => void }) {
+export function CvSource({
+  value,
+  onChange,
+  savedOnly = false,
+  originalsOnly = false,
+}: {
+  value: CvSourceValue | null;
+  onChange: (v: CvSourceValue | null) => void;
+  /** Only the user's saved resumes: no uploaded file (Tailor works on resumes in the builder). */
+  savedOnly?: boolean;
+  /** Leave out tailored versions: only an original can be tailored (PRD TR-08). */
+  originalsOnly?: boolean;
+}) {
   const [tab, setTab] = useState<Tab>("saved");
   const [resumes, setResumes] = useState<ResumeSummary[] | null>(null);
+  const [hasVersions, setHasVersions] = useState(false);
   const [selected, setSelected] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,8 +52,10 @@ export function CvSource({ value, onChange }: { value: CvSourceValue | null; onC
     let alive = true;
     resumeApi
       .list()
-      .then((list) => {
+      .then((all) => {
         if (!alive) return;
+        const list = originalsOnly ? all.filter((r) => !r.tailoredFrom) : all;
+        setHasVersions(all.length > list.length);
         setResumes(list);
         const first = list[0]?.id ?? "";
         setSelected(first);
@@ -104,12 +119,14 @@ export function CvSource({ value, onChange }: { value: CvSourceValue | null; onC
 
   return (
     <div>
-      <div role="tablist" aria-label="Which CV" className="flex gap-2">
-        {tabButton("saved", "One of my resumes")}
-        {tabButton("file", "A CV file")}
-      </div>
+      {!savedOnly && (
+        <div role="tablist" aria-label="Which CV" className="flex gap-2">
+          {tabButton("saved", "One of my resumes")}
+          {tabButton("file", "A CV file")}
+        </div>
+      )}
 
-      {tab === "saved" ? (
+      {tab === "saved" || savedOnly ? (
         <div className="mt-4">
           {resumes === null && !error && <p className="text-slate-500">Loading your resumes…</p>}
           {resumes?.length === 0 && (
@@ -122,7 +139,8 @@ export function CvSource({ value, onChange }: { value: CvSourceValue | null; onC
               <Link href="/upload" className="font-medium text-brand hover:underline">
                 upload one
               </Link>
-              , or use a CV file instead.
+              {savedOnly ? "." : ", or use a CV file instead."}
+              {hasVersions && " Your tailored versions are not listed: tailor from your original resume."}
             </p>
           )}
           {resumes && resumes.length > 0 && (
@@ -155,6 +173,9 @@ export function CvSource({ value, onChange }: { value: CvSourceValue | null; onC
                 Reload after editing
               </button>
             </div>
+          )}
+          {originalsOnly && hasVersions && resumes && resumes.length > 0 && (
+            <p className="mt-2 text-xs text-slate-500">Tailored versions are not listed: tailor from your original resume.</p>
           )}
         </div>
       ) : (

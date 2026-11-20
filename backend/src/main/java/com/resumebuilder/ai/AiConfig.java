@@ -77,4 +77,20 @@ public class AiConfig {
         log.info("Job match uses Anthropic model {}.", model);
         return new AnthropicMatchAnalyzer(json, apiKey.trim(), model, maxOutputTokens, timeoutSeconds);
     }
+
+    /** Proposes tailoring changes: the real model when an API key is set, otherwise a harmless sample (demo mode). */
+    @Bean
+    Tailorer tailorer(
+            JsonMapper json,
+            @Value("${app.ai.api-key:}") String apiKey,
+            @Value("${app.ai.tailor-model:claude-sonnet-5-5}") String model,
+            @Value("${app.ai.tailor-max-output-tokens:6000}") long maxOutputTokens,
+            @Value("${app.ai.tailor-timeout-seconds:120}") long timeoutSeconds) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("ANTHROPIC_API_KEY is not set: tailoring runs in DEMO mode (only reorders skills).");
+            return new DemoTailorer();
+        }
+        log.info("Tailoring uses Anthropic model {}.", model);
+        return new AnthropicTailorer(json, apiKey.trim(), model, maxOutputTokens, timeoutSeconds);
+    }
 }
