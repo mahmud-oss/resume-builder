@@ -41,6 +41,14 @@
 
 ---
 
+> **Update, 20 November 2026.** Decisions on the ATS Checker, Job Match and Tailored Resume (the first five bullets change requirements; the rest add detail):
+> - **ATS Checker and Job Match are standalone tools.** A user can upload any CV (PDF or DOCX) and run either one without going through the builder. This **replaces ATS-02** (no standalone upload) and the second bullet of story 13.6.
+> - **Tailored Resume stays tied to the builder**, works on original resumes only (not on a tailored version), and is reached through a saved or imported resume.
+> - **Payment is not built yet.** AI features show a "Pro" label and are not gated; daily limits are open during development (PAY-10, PAY-11). ATS-07 stays open.
+> - **ATS and Job Match share one AI analysis** of the CV against a job description, so their keyword results agree.
+> - **Navigation:** a site-wide side navigation holds the tools (NAV-01).
+> - Added: file-level ATS checks (ATS-08), the ATS rules and bands (ATS-09), the Job Match truthfulness check (JM-08), and the Tailored Resume change rules and version handling (TR-08 to TR-12).
+
 ## 1. Document Overview
 
 This document defines a web product that helps job seekers in Bangladesh create a professional resume, and then use AI to tailor it to jobs, write cover letters, check it for applicant-tracking-system (ATS) readability, prepare for interviews, and publish a portfolio website. Users pay in small amounts for AI help (credits) and to export.
@@ -165,7 +173,7 @@ The user picks a **template**, then fills it in one of **three ways**. All three
 
 ### 9.2 Features built on the resume
 
-Job Match, Tailored Resume, Cover Letter, ATS Checker, Interview Prep, Portfolio.
+Job Match and ATS Checker (both also usable on any uploaded CV, without the builder), Tailored Resume (builder only), Cover Letter, Interview Prep, Portfolio.
 
 ### 9.3 Supporting features
 
@@ -214,6 +222,13 @@ The user can switch template at any time. It happens **instantly, with no confir
 
 1. The user pastes a job description (or picks a job from the job list).
 2. The same job description is reused across Job Match, Tailored Resume, Cover Letter and Interview Prep in the session.
+
+### 10.5a Standalone check flow (ATS Checker and Job Match)
+
+1. The user opens **ATS checker** or **Job match** from the side navigation.
+2. The user picks one of their saved resumes, or uploads a PDF or DOCX. An uploaded file is read once per browser session and reused by both tools; it is not stored.
+3. For Job Match (and the ATS keyword check) the user pastes a job description, which is shared across the tools in the session.
+4. The result appears with the fixes, and the user can edit and re-check. An uploaded CV can be imported into the builder with one click, without being read again.
 
 ### 10.6 Portfolio flow
 
@@ -312,20 +327,25 @@ Priority is **not yet assigned** because the phase split is pending. **Status** 
 |---|---|---|
 | JD-01 | The user supplies a job description as **pasted text** | Decided |
 | JD-02 | Job descriptions may be in **any language**, including Bangla | Decided |
-| JD-03 | The same job description is reused across Job Match, Tailored Resume, Cover Letter and Interview Prep in a session | Decided |
+| JD-03 | The same job description is reused across ATS Checker, Job Match, Tailored Resume, Cover Letter and Interview Prep in a session | Decided |
 | JD-04 | Matching is done in English. Explanations are shown in the language the user is chatting in (Bangla or English). The tailored resume stays English | Decided |
 | JD-05 | Uploading a JD file, or pasting a job-post link | **Deferred** |
+| JD-06 | The pasted job description is limited to 10,000 characters. It is kept in the browser for the session and not stored on the server | Decided |
 
 ### 11.7 Job Match
 
 | ID | Requirement | Status |
 |---|---|---|
-| JM-01 | Compare the saved resume with a job description | Decided |
+| JM-01 | Compare a CV with a job description. The CV is **a saved resume or an uploaded PDF or DOCX**; the tool works without the builder | Decided |
 | JM-02 | Output: an overall match **estimate**, matching skills, missing skills, improvement suggestions | Decided |
 | JM-03 | The score is shown as a band or labelled estimate and is not presented as a measurement or as what an employer's system will compute | Proposed |
 | JM-04 | For each missing skill, the app can ask "Do you have experience with X?"; if yes, the chat records it as a fact | Proposed |
 | JM-05 | Link from the results to the editor and to Tailored Resume | Proposed |
-| JM-06 | Uses fewer credits than Tailored Resume | Decided |
+| JM-06 | Uses fewer credits than Tailored Resume (credits are not built yet; see PAY-10 and PAY-11) | Decided |
+| JM-07 | One AI **analysis** compares the CV with the job description; its result is kept for the session and reused by the ATS keyword check and by Tailored Resume | Decided |
+| JM-08 | **Truthfulness check:** the server shows a "matching" skill only if it appears in the CV, and a "missing" skill only if it comes from the job description. Missing skills are split into **required** and **nice to have** where the job description says so | Decided |
+| JM-09 | The explanation can be shown in English or Bangla (a switch, English by default); the matching itself is always done in English | Decided |
+| JM-10 | "I have this" on a missing skill opens the AI chat with a pre-filled question. The skill is never added to the CV automatically | Decided |
 
 ### 11.8 Tailored Resume
 
@@ -338,6 +358,11 @@ Priority is **not yet assigned** because the phase split is pending. **Status** 
 | TR-05 | If the match is poor, **warn but still allow** (for example, "tailoring can reword what is there but cannot add missing skills") | Decided |
 | TR-06 | **No limit** on the number of tailored versions for now; the user can name and delete versions | Decided (no limit); Proposed (naming, deleting) |
 | TR-07 | Export as PDF | Decided |
+| TR-08 | Tailored Resume works on **original resumes only**. On a tailored version the page says to tailor from the original | Decided |
+| TR-09 | Tailored Resume is reached through the builder: a saved resume, or a CV imported into it. A user with none is offered **Import a CV** or **Build one** | Decided |
+| TR-10 | Only the summary wording, the wording of experience and project bullets, and the order of skills within a group may change. Job titles, companies, dates, degrees, institutions, names and contact details never change | Decided |
+| TR-11 | The server rejects any proposed change that adds a number or a skill that is not in the original resume, or that edits a protected field | Decided |
+| TR-12 | A tailored version is a normal resume (editable, exportable) linked to its original. The dashboard lists versions under their original. Deleting the original keeps its versions. The default name is the original's title plus the job title found in the job description | Decided |
 
 ### 11.9 Cover Letter
 
@@ -355,13 +380,16 @@ Priority is **not yet assigned** because the phase split is pending. **Status** 
 
 | ID | Requirement | Status |
 |---|---|---|
-| ATS-01 | Check a **saved resume** (one that went through the builder process) and report formatting issues, missing keywords, readability and section quality | Decided |
-| ATS-02 | No standalone file upload for ATS checking. A user with an existing CV uploads it through the paid Upload path first | Decided |
+| ATS-01 | Check **a saved resume or an uploaded CV** and report formatting issues, missing keywords, readability and section quality | Decided |
+| ATS-02 | **Standalone:** a user can upload any PDF or DOCX and check it without the builder. (This replaces the earlier decision that an existing CV had to go through the paid Upload path first.) The file is read once per browser session, reused by the other tools, and never stored | Decided (20 November 2026) |
 | ATS-03 | A job description is **optional**. Without one: general ATS check. With one: keyword check for that job. The page tells the user that adding one gives a keyword check | Decided |
 | ATS-04 | Results split into "OK" and "needs improvement", each with a specific fix; the user can edit and re-check | Decided |
 | ATS-05 | The score is labelled as an **estimate** | Decided |
 | ATS-06 | Where possible use rule-based checks (cheap) and use AI for keyword relevance and writing quality | Proposed |
-| ATS-07 | Whether the ATS Checker is free or paid. **Decide later; build as a setting** | **Open** |
+| ATS-07 | Whether the ATS Checker is free or paid. **Decide later; build as a setting.** For now the AI parts carry a "Pro" label and are not gated (PAY-10) | **Open** |
+| ATS-08 | **File-level checks** on an uploaded file, shown as findings: PDF text that cannot be extracted (scanned or image-only), signs of tables or multiple columns, mostly graphics, too many pages, fonts not embedded; DOCX layout tables, text boxes, contact details in the header or footer, images, columns. These are heuristics and the page says so. For a saved resume the template's traits are used instead | Decided |
+| ATS-09 | **Content rules** (fixed code, no AI, free): *critical* (no full name, email or phone; neither experience nor education); *warnings* (summary missing or longer than about 600 characters; an experience entry without bullets; a bullet longer than about 220 characters; mixed date formats; more than 2 pages; an invalid-looking email; a non-standard section title; no skills section; under about 150 words; Bangla script in the text); *notes* (photo present, contact icons on, multi-column template). Band: **Strong** = no criticals and at most 2 warnings; **Good** = no criticals and at most 5; **Fair** = 1 critical or more than 5 warnings; **Needs work** = anything worse. Shown as an estimate | Decided |
+| ATS-10 | Two optional AI parts, each labelled Pro: **keywords for a job** (reuses the shared analysis, JM-07) and **a writing review** (feedback on the summary and bullets with suggested rewrites that use only facts already in the CV) | Decided |
 
 ### 11.11 Interview Prep
 
@@ -418,6 +446,8 @@ Priority is **not yet assigned** because the phase split is pending. **Status** 
 | PAY-07 | The platform keeps its **own record** of every purchase and credit spent | Proposed |
 | PAY-08 | Payment provider, prices, bundle sizes and the credit cost of each action | **Open** |
 | PAY-09 | The previous PRD's weekly/monthly/yearly subscription plans are not used unless the team reverses this | Decided |
+| PAY-10 | Until payment exists, AI features (CV upload, Job match, Tailor, and the AI parts of the ATS checker) show a small **Pro** label. Its hover text reads: "Free during early access. This will become a paid feature." | Decided |
+| PAY-11 | During development nothing is gated: no credits are charged and there is no payment check. Daily AI limits for these features default to none (a per-minute guard remains) and are set by configuration | Decided |
 
 ### 11.15 Admin panel
 
@@ -456,6 +486,14 @@ Priority is **not yet assigned** because the phase split is pending. **Status** 
 | LP-05 | The features section leads with the three ways to build a CV | Proposed |
 | LP-06 | FAQ is static content edited by developers; no content-management tool at first | Proposed |
 | LP-07 | Direct links into the public template gallery and job list | Proposed |
+
+### 11.18 Navigation
+
+| ID | Requirement | Status |
+|---|---|---|
+| NAV-01 | A signed-in user sees a **side navigation** on app pages: My resumes, Upload CV, ATS checker, Job match, Tailor my resume, Templates. On a phone it collapses into a menu | Decided |
+| NAV-02 | The editor may offer a shortcut that opens a tool with the current resume preselected; the tools do not depend on it | Proposed |
+| NAV-03 | The tools require a login for now (AI cost). Whether a visitor may try them without an account stays open (AC-03) | Decided |
 
 ---
 
@@ -555,7 +593,7 @@ Representative stories, not exhaustive. Written in Given–When–Then form.
 ### 13.6 ATS Checker
 
 - **Given** I have a saved resume, **when** I run the check without a job description, **then** I get a general check and a note that adding a job description gives a keyword check.
-- **Given** I do not have a resume on the platform, **then** I am directed to build or upload one first.
+- **Given** I have a CV file that is not in the builder, **when** I upload it to the ATS checker, **then** I get the file-level findings and the content check without building anything, and I can import it into the builder.
 
 ### 13.7 Interview Prep
 
@@ -690,6 +728,8 @@ Needed so the team can tell whether the product works. *Event names are indicati
 
 > **Update, 13 November 2026.** Answers to questions 1–10: **(1)** use the suggested template set; **(2)** custom sections and fields are in; **(3)** undo/redo is in; **(4)** in-preview editing is text only; **(5)** account requirement: decide later, built so it is easy to introduce; **(6, 7, 8)** ATS and portfolio pricing, starter credits for export, and watermarking: decide later, built as settings; **(9)** job tags match **any**; **(10)** admin project structure (separate project or the same one) to be confirmed later. All other open questions are flagged for later. Items marked "decide later" should be implemented as configuration, not hard-coded behaviour.
 
+> **Update, 20 November 2026.** Question 6 (ATS Checker free or paid) is still open: the AI parts show a "Pro" label and are not gated yet (PAY-10, PAY-11). The ATS Checker accepts any uploaded CV (ATS-02).
+
 **Product**
 1. Which **5–6 templates**? (Untested suggestion: classic ATS-safe, modern, compact one-page, design-led, experienced or academic.)
 2. Custom **sections** as well as custom fields? (ED-07)
@@ -727,12 +767,12 @@ Every area of `Resume_Builder_PRD.md` v1.0 is accounted for. Nothing is dropped 
 | Landing page | LP-01 to LP-05 | Section 11.17. English only, no reviews, credit-based pricing section, static FAQ |
 | Template gallery and builder | RB-01 to RB-10 | Sections 11.1 to 11.3. 5–6 templates, in-preview editing kept, PDF only, undo/redo open |
 | Resume parser | RB-02, RB-09 | Section 11.4 (Upload), now paid and including Bangla |
-| Tailored Resume | TR-01 to TR-06 | Section 11.8. "For Someone Else" removed; new version per job; warn but allow |
+| Tailored Resume | TR-01 to TR-06 | Section 11.8. "For Someone Else" removed; new version per job; warn but allow; originals only, builder only (20 November 2026) |
 | Cover Letter | CL-01 to CL-04 | Section 11.9. DOCX deferred |
-| Job Match | JM-01 to JM-04 | Section 11.7. ATS insights moved to ATS Checker |
+| Job Match | JM-01 to JM-04 | Section 11.7. ATS insights moved to ATS Checker. Standalone on any uploaded CV (20 November 2026) |
 | Interview Prep | IP-01 to IP-05 | Section 11.11. User picks days; warn but allow; no tracking |
 | Portfolio Builder | PB-01 to PB-05 | Section 11.12. 2 templates; custom domain deferred |
-| ATS Checker | ATS-01 to ATS-04 | Section 11.10. No standalone upload |
+| ATS Checker | ATS-01 to ATS-04 | Section 11.10. **Standalone**: any uploaded CV can be checked (changed 20 November 2026) |
 | Resume Review (human) | RR-01 to RR-04 | **Deferred** (section 8) |
 | Resume Guidelines hub | RG-01 to RG-04 | **Deferred** (section 8) |
 | Account and subscription | AC-01 to AC-05 | Sections 11.13, 11.14. Subscriptions replaced by credits; payment provider open |
