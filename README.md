@@ -178,6 +178,8 @@ database expires after 30 days.
 **Frontend on Vercel.** Import the repo, set the *Root Directory* to `frontend`, and add the environment
 variable `BACKEND_URL` = your Render service URL (for example `https://resume-builder-backend.onrender.com`).
 
+**Landing page.** `/` is the public landing page (`components/landing/Landing.tsx`): hero, the three ways to build, the tools, how it works, pricing, FAQ. Its copy is plain text in that file. The sign-up buttons follow `GET /api/auth/config` (`registrationOpen`), so while signup is closed the page, the header and the sign-in page offer "Sign in" and say sign-ups are closed instead of showing a button that leads nowhere.
+
 **Accounts.** Signup is closed by default (`ALLOW_REGISTRATION=false`) so strangers cannot spend your AI key.
 To make the first account, set `ALLOW_REGISTRATION=true` on Render, register, then set it back to `false`.
 Locally, put `ALLOW_REGISTRATION=true` in `backend/.env` to sign up.

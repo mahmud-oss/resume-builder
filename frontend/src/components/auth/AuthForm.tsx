@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { ApiError } from "@/lib/api";
+import { useRegistrationOpen } from "@/lib/registration";
 
 import { useAuth } from "./AuthProvider";
 
@@ -23,6 +24,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const isLogin = mode === "login";
+  const registrationOpen = useRegistrationOpen();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -52,6 +54,26 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   const input = "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-brand focus:ring-2 focus:ring-brand/30";
   const other = `${isLogin ? "/register" : "/login"}${next !== "/dashboard" ? `?next=${encodeURIComponent(next)}` : ""}`;
+
+  if (!isLogin && registrationOpen === false) {
+    return (
+      <main className="mx-auto w-full max-w-sm px-4 py-14">
+        <h1 className="text-2xl font-bold">Sign-ups are closed</h1>
+        <p className="mt-3 text-slate-600">
+          We are in early access and are not creating new accounts right now. If you already have an account you can sign in.
+        </p>
+        <p className="mt-4 text-sm">
+          <Link href="/login" className="font-medium text-brand hover:underline">
+            Sign in
+          </Link>
+          {" · "}
+          <Link href="/templates" className="font-medium text-brand hover:underline">
+            Browse templates
+          </Link>
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-sm px-4 py-14">
@@ -93,10 +115,16 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </button>
       </form>
       <p className="mt-6 text-sm text-slate-600">
-        {isLogin ? "New here?" : "Already have an account?"}{" "}
-        <Link href={other} className="font-medium text-brand hover:underline">
-          {isLogin ? "Create an account" : "Sign in"}
-        </Link>
+        {isLogin && registrationOpen === false ? (
+          "Sign-ups are closed during early access."
+        ) : isLogin && registrationOpen === null ? null : (
+          <>
+            {isLogin ? "New here?" : "Already have an account?"}{" "}
+            <Link href={other} className="font-medium text-brand hover:underline">
+              {isLogin ? "Create an account" : "Sign in"}
+            </Link>
+          </>
+        )}
       </p>
     </main>
   );

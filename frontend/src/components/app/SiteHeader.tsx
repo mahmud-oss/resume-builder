@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { BRAND } from "@/lib/brand";
 import { showsSideNav } from "@/lib/nav";
+import { useRegistrationOpen } from "@/lib/registration";
 import { useHydrated } from "@/lib/useHydrated";
 
 import { AppNav } from "./AppNav";
@@ -15,6 +16,7 @@ export function SiteHeader() {
   const { user, ready, logout } = useAuth();
   const pathname = usePathname();
   const hydrated = useHydrated();
+  const registrationOpen = useRegistrationOpen();
   // The phone menu is open for one page only: moving to another page closes it.
   const [openOn, setOpenOn] = useState<string | null>(null);
   // The editor has its own toolbar and the print page must stay clean.
@@ -67,9 +69,12 @@ export function SiteHeader() {
                   <Link href="/login" className="text-slate-600 hover:text-slate-900">
                     Sign in
                   </Link>
-                  <Link href="/register" className="rounded-md bg-brand px-3 py-1.5 font-medium text-white hover:opacity-90">
-                    Sign up
-                  </Link>
+                  {/* Only offered while sign-up is open, so the button never leads to a dead end. */}
+                  {registrationOpen === true && (
+                    <Link href="/register" className="rounded-md bg-brand px-3 py-1.5 font-medium text-white hover:opacity-90">
+                      Sign up
+                    </Link>
+                  )}
                 </>
               )}
             </>

@@ -35,6 +35,11 @@ public class AuthService {
         this.decoyHash = encoder.encode("decoy-password-for-timing");
     }
 
+    /** Whether new accounts can be created now. The sign-up buttons on the website follow this. */
+    public boolean registrationOpen() {
+        return allowRegistration;
+    }
+
     public AuthResponse register(RegisterRequest request) {
         if (!allowRegistration) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Registration is closed");

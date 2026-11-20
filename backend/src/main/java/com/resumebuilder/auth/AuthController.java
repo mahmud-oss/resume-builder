@@ -46,6 +46,12 @@ public class AuthController {
         return new UserView(UUID.fromString(jwt.getSubject()), jwt.getClaimAsString("email"), null);
     }
 
+    /** Public: lets the website show "Get started" only when sign-up is actually open. */
+    @GetMapping("/auth/config")
+    Map<String, Boolean> config() {
+        return Map.of("registrationOpen", auth.registrationOpen());
+    }
+
     @GetMapping("/health")
     Map<String, String> health() {
         return Map.of("status", "ok");
