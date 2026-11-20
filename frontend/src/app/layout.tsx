@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Inter, Lato, Merriweather, Open_Sans, Source_Serif_4 } from "next/font/google";
 
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { AppShell } from "@/components/app/AppShell";
 import { SiteHeader } from "@/components/app/SiteHeader";
 import { BRAND } from "@/lib/brand";
 
@@ -33,7 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Suspense fallback={null}>
             <SiteHeader />
           </Suspense>
-          {children}
+          <AppShell>{children}</AppShell>
         </AuthProvider>
       </body>
     </html>

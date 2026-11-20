@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 
+import { ProBadge } from "@/components/app/ProBadge";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { PRO_HINT } from "@/lib/pro";
 import { aiApi, ApiError, resumeApi } from "@/lib/api";
 import { DEFAULT_TEMPLATE_ID, getTemplate, TEMPLATES } from "@/lib/resume/templates";
 import { extractionToDoc, titleFor } from "@/lib/upload/convert";
@@ -47,7 +49,10 @@ function Upload() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold">Upload your CV</h1>
+      <h1 className="flex items-center gap-2 text-2xl font-bold">
+        Upload your CV <ProBadge />
+      </h1>
+      <p className="mt-1 text-xs text-slate-500">{PRO_HINT}</p>
       <p className="mt-2 text-slate-600">
         Already have a CV? Upload it and we will turn it into an editable resume, so you do not have to type it again.
         You can fix anything afterwards. CVs in English or Bangla both work; the new resume is in English.
